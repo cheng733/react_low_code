@@ -9,6 +9,8 @@ export enum ComponentType {
   IMAGE = 'image',
   // 添加二维码类型
   QRCODE = 'qrcode',
+
+  CANVAS = 'canvas'
 }
 
 // 组件分类
@@ -47,6 +49,7 @@ export interface CanvasState {
   width: number;
   height: number;
   scale: number;
+  backgroundColor: string;
 }
 
 // 历史记录操作类型

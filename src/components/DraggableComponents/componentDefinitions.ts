@@ -8,16 +8,15 @@ export const layoutComponents: ComponentDefinition[] = [
     name: '栅格容器',
     icon: 'BorderOuterOutlined',
     props: {
-      columns: 2,
+      columns: 1,
       gutter: [16, 16],
       resizable: true,
       cells: [
-        { id: 'cell-1', span: 12 },
-        { id: 'cell-2', span: 12 },
+        { id: 'cell-1', span: 24 },
       ],
       style: {
         // width: '100%',
-        padding: '12px',
+        // padding: '12px',
         background: '#fafafa',
         borderRadius: '4px',
         position: 'relative',

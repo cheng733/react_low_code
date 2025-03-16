@@ -6,7 +6,6 @@ import Header from './components/Header/Header';
 import ComponentPanel from './components/ComponentPanel/ComponentPanel';
 import Canvas from './components/Canvas/Canvas';
 import PropertyPanel from './components/PropertyPanel/PropertyPanel';
-
 const AppContainer = styled.div`
   height: 100vh;
   display: flex;

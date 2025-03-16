@@ -15,6 +15,7 @@ const { Title } = Typography;
 
 const PanelContainer = styled.div<{ collapsed: boolean }>`
   height: 100%;
+  padding:0 8px;
   overflow-y: auto;
   border-right: 1px solid #f0f0f0;
   width: ${(props) => (props.collapsed ? '50px' : '280px')};

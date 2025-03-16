@@ -1,154 +1,144 @@
-import React from 'react';
-import { Card, Form, Input, InputNumber, Select, ColorPicker } from 'antd';
-import { useStore } from '../../store/useStore';
-import { ComponentType } from '../../types';
+import React, { useMemo } from 'react';
+import { Collapse } from 'antd';
 import styled from 'styled-components';
+import { get, set, cloneDeep } from 'lodash';
+import { useStore } from '../../store/useStore';
+import { ComponentInstance, ComponentType } from '../../types';
+import PropertyField from './PropertyField';
+import { getPropertyConfigByType, PropertyConfig } from '../../config/propertyPanelConfig';
+
+const { Panel } = Collapse;
 
 const PanelContainer = styled.div`
+  width: 300px;
   height: 100%;
   overflow-y: auto;
   border-left: 1px solid #f0f0f0;
+  background-color: #fff;
+  padding: 0;
+`;
+
+const PanelHeader = styled.div`
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  border-bottom: 1px solid #f0f0f0;
+`;
+
+const PropertyGroup = styled.div`
+  padding: 12px 16px;
 `;
 
 const PropertyPanel: React.FC = () => {
-  const { components, selectedId, updateComponent } = useStore();
-  const selectedComponent = components.find((c) => c.id === selectedId);
+  const { components, selectedId, updateComponent, canvas,updateCanvas } = useStore();
 
-  if (!selectedComponent) {
-    return (
-      <PanelContainer>
-        <Card title="属性面板" variant="borderless">
-          <div style={{ textAlign: 'center', color: '#999' }}>请选择一个组件</div>
-        </Card>
-      </PanelContainer>
-    );
-  }
+  // 查找选中的组件
+  const selectedComponent = useMemo(() => {
+    if (!selectedId) return null;
 
-  const handleStyleChange = (key: string, value: string | number) => {
-    updateComponent(selectedComponent.id, {
-      props: {
-        ...selectedComponent.props,
-        style: {
-          ...(selectedComponent.props.style || {}),
-          [key]: value,
-        },
-      },
+    const findComponent = (comps: ComponentInstance[]): ComponentInstance | null => {
+      for (const comp of comps) {
+        if (comp.id === selectedId) {
+          return comp;
+        }
+        if (comp.children) {
+          const found = findComponent(comp.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findComponent(components);
+  }, [components, selectedId]);
+
+  // 根据组件类型获取属性配置
+  const propertyConfigs = useMemo(() => {
+    if (!selectedComponent) {
+      // 如果没有选中组件，返回画布属性配置
+      return getPropertyConfigByType(ComponentType.CANVAS);
+    }
+    return getPropertyConfigByType(selectedComponent.type);
+  }, [selectedComponent]);
+
+  // 按组分组属性
+  const groupedProperties = useMemo(() => {
+    const groups: Record<string, PropertyConfig[]> = {};
+    
+    propertyConfigs.forEach(config => {
+      const group = config.group || '基础';
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(config);
     });
+    
+    return groups;
+  }, [propertyConfigs]);
+
+  // 处理属性变更
+  const handlePropertyChange = (key: string, value: any) => {
+    if (!selectedComponent) {
+      // 如果是画布属性
+      const updates = {};
+      
+      // 处理嵌套属性 (如 style.fontSize)
+      if (key.includes('.')) {
+        const [parent, child] = key.split('.');
+        if (!updates[parent]) {
+          updates[parent] = {};
+        }
+        updates[parent][child] = value;
+      } else {
+        updates[key] = value;
+      }
+      
+      console.log('Updating canvas property:', key, value, updates);
+      updateCanvas(updates);
+      return;
+    }
+  
+    // 更新组件属性
+    const updatedProps = cloneDeep(selectedComponent.props || {});
+    
+    // 处理嵌套属性 (如 style.width)
+    set(updatedProps, key, value);
+    
+    updateComponent(selectedComponent.id, { props: updatedProps });
   };
 
-  const handlePropChange = (key: string, value: string | number | React.ReactNode) => {
-    updateComponent(selectedComponent.id, {
-      props: {
-        ...selectedComponent.props,
-        [key]: value,
-      },
-    });
+  // 获取面板标题
+  const getPanelTitle = () => {
+    if (selectedComponent) {
+      return `${selectedComponent.type} 属性`;
+    }
+    return '画布属性';
   };
 
   return (
     <PanelContainer>
-      <Card title="属性面板" bordered={false}>
-        <Form layout="vertical">
-          {/* 通用样式属性 */}
-          <Form.Item label="宽度">
-            <InputNumber
-              value={selectedComponent.props.style?.width}
-              onChange={(value) => handleStyleChange('width', value)}
-              addonAfter="px"
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-
-          {selectedComponent.type === ComponentType.TEXT && (
-            <>
-              <Form.Item label="文本内容">
-                <Input
-                  value={selectedComponent.props.content as string}
-                  onChange={(e) => handlePropChange('content', e.target.value)}
+      <PanelHeader>{getPanelTitle()}</PanelHeader>
+      <Collapse defaultActiveKey={Object.keys(groupedProperties)} bordered={false}>
+        {Object.entries(groupedProperties).map(([group, configs]) => (
+          <Panel header={group} key={group}>
+            <PropertyGroup>
+              {configs.map(config => (
+                <PropertyField
+                  key={config.key}
+                  config={config}
+                  value={
+                    selectedComponent
+                      ? get(selectedComponent.props, config.key)
+                      : get(canvas, config.key)
+                  }
+                  onChange={handlePropertyChange}
+                  componentProps={selectedComponent ? selectedComponent.props : canvas}
                 />
-              </Form.Item>
-              <Form.Item label="字体大小">
-                <InputNumber
-                  value={selectedComponent.props.style?.fontSize}
-                  onChange={(value) => handleStyleChange('fontSize', value + 'px')}
-                  addonAfter="px"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-              <Form.Item label="文字颜色">
-                <ColorPicker
-                  value={selectedComponent.props.style?.color}
-                  onChange={(value) => handleStyleChange('color', value.toHexString())}
-                />
-              </Form.Item>
-            </>
-          )}
-
-          {selectedComponent.type === ComponentType.BUTTON && (
-            <>
-              <Form.Item label="按钮文本">
-                <Input
-                  value={selectedComponent.props.children}
-                  onChange={(e) => handlePropChange('children', e.target.value)}
-                />
-              </Form.Item>
-              <Form.Item label="按钮类型">
-                <Select
-                  value={selectedComponent.props.type}
-                  onChange={(value) => handlePropChange('type', value)}
-                  options={[
-                    { label: '主按钮', value: 'primary' },
-                    { label: '次按钮', value: 'default' },
-                    { label: '虚线按钮', value: 'dashed' },
-                    { label: '文本按钮', value: 'text' },
-                    { label: '链接按钮', value: 'link' },
-                  ]}
-                />
-              </Form.Item>
-            </>
-          )}
-
-          {selectedComponent.type === ComponentType.QRCODE && (
-            <>
-              <Form.Item label="链接地址">
-                <Input
-                  value={selectedComponent.props.value}
-                  onChange={(e) => handlePropChange('value', e.target.value)}
-                />
-              </Form.Item>
-              <Form.Item label="尺寸大小">
-                <InputNumber
-                  min={64}
-                  max={300}
-                  value={selectedComponent.props.size}
-                  onChange={(value) => handlePropChange('size', value)}
-                  addonAfter="px"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-              <Form.Item label="图标地址">
-                <Input
-                  value={selectedComponent.props.icon}
-                  onChange={(e) => handlePropChange('icon', e.target.value)}
-                  placeholder="可选，图标URL"
-                />
-              </Form.Item>
-              <Form.Item label="前景色">
-                <ColorPicker
-                  value={selectedComponent.props.color}
-                  onChange={(value) => handlePropChange('color', value.toHexString())}
-                />
-              </Form.Item>
-              <Form.Item label="背景色">
-                <ColorPicker
-                  value={selectedComponent.props.bgColor}
-                  onChange={(value) => handlePropChange('bgColor', value.toHexString())}
-                />
-              </Form.Item>
-            </>
-          )}
-        </Form>
-      </Card>
+              ))}
+            </PropertyGroup>
+          </Panel>
+        ))}
+      </Collapse>
     </PanelContainer>
   );
 };

@@ -1,78 +1,79 @@
-import React from 'react';
-import { useDrop } from 'react-dnd';
-import { useStore } from '../../store/useStore';
-import { getComponentDefinitionByType } from '../DraggableComponents/componentDefinitions';
-import CanvasComponent from './CanvasComponent.tsx';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
+import { useStore } from '../../store/useStore';
+import CanvasComponent from './CanvasComponent';
+import { useDrop } from 'react-dnd';
 
-const CanvasContainer = styled.div<{ ispreview: boolean }>`
-  background-color: #fff;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  padding: 10px;
-  margin: 20px auto;
+const CanvasWrapper = styled.div<{ scale: number; ispreview: boolean }>`
   position: relative;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transform: ${({ scale }) => `scale(${scale})`};
+  transform-origin: top center;
+  transition: transform 0.3s;
+  margin: 20px auto;
   overflow: auto;
-  transition: all 0.3s;
-  ${({ ispreview }) => (ispreview ? 'pointer-events: none;' : '')}
-`;
-
-const EmptyCanvas = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #999;
-  font-size: 16px;
+  cursor: ${({ ispreview }) => (ispreview ? 'default' : 'pointer')};
 `;
 
 const Canvas: React.FC = () => {
-  const { components, canvas, addComponent, ispreview } = useStore();
+  const { components, canvas, addComponent, selectComponent, ispreview } = useStore();
 
-  const [{ isOver }, drop] = useDrop(
-    () => ({
-      accept: 'COMPONENT',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      drop: (item: any, monitor) => {
-        // 如果已经在其他地方处理了放置，则不再处理
-        if (monitor.didDrop()) {
-          return;
-        }
+  // 使用 react-dnd 的 useDrop 钩子处理拖放
+  const [{ isOver }, drop] = useDrop({
+    accept: 'COMPONENT',
+    drop: (item: any, monitor) => {
+      // 如果已经被其他组件处理了，不再处理
+      if (monitor.didDrop()) {
+        return;
+      }
 
-        // 获取组件定义
-        const componentDef = getComponentDefinitionByType(item.type);
-        if (componentDef) {
-          // 添加新组件到画布
-          addComponent({
-            ...componentDef,
-            parentId: null,
-          });
-        }
-      },
-      collect: (monitor) => ({
-        isOver: !!monitor.isOver({ shallow: true }),
-      }),
+      // 添加新组件到画布
+      addComponent(item);
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver({ shallow: true }),
     }),
-    [addComponent],
-  );
+  });
+
+  // 处理画布点击事件，取消选中
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // 如果点击的是画布本身，而不是其中的组件，则取消选中
+    if (e.target === e.currentTarget) {
+      selectComponent(null);
+    }
+  };
+
+  // 调试输出画布属性
+  useEffect(() => {
+    console.log('Canvas properties:', canvas);
+  }, [canvas]);
+
+  // 准备画布样式
+  const canvasStyle = {
+    width: canvas.width || '800px',
+    height: canvas.height || '1200px',
+    backgroundColor: canvas.backgroundColor || '#fff',
+    border: isOver && !ispreview ? '2px dashed #1890ff' : '1px solid #e8e8e8',
+  };
+
+  // 合并样式对象
+  if (canvas.style) {
+    Object.assign(canvasStyle, canvas.style);
+  }
 
   return (
-    <CanvasContainer
+    <CanvasWrapper
       ref={drop}
-      style={{
-        width: canvas.width * canvas.scale,
-        height: canvas.height * canvas.scale,
-        transform: `scale(${canvas.scale})`,
-        transformOrigin: 'top left',
-        border: isOver ? '2px dashed #1890ff' : '1px solid #d9d9d9',
-      }}
+      style={canvasStyle}
+      scale={canvas.scale || 1}
       ispreview={ispreview}
+      onClick={handleCanvasClick}
     >
-      {components.length === 0 ? (
-        <EmptyCanvas>拖拽组件到此处</EmptyCanvas>
-      ) : (
-        components.map((component) => <CanvasComponent key={component.id} component={component} />)
-      )}
-    </CanvasContainer>
+      {components.map((component) => (
+        <CanvasComponent key={component.id} component={component} />
+      ))}
+    </CanvasWrapper>
   );
 };
 
