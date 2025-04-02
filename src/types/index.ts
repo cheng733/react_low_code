@@ -23,7 +23,7 @@ export enum ComponentCategory {
 export enum CanvasSize {
   A4 = 'a4',
   A5 = 'a5',
-  FIVE_JOINT = 'fiveJoint', // 五联纸
+  FIVE_JOINT = 'fiveJoint',
 }
 
 // 组件定义接口
@@ -50,6 +50,7 @@ export interface CanvasState {
   height: number;
   scale: number;
   backgroundColor: string;
+  style:CSSStyleRule;
 }
 
 // 历史记录操作类型

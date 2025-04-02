@@ -157,7 +157,6 @@ const commonStyleProperties: PropertyConfig[] = [
   },
 ];
 
-// 画布属性配置
 const canvasProperties: PropertyConfig[] = [
   {
     key: 'backgroundColor',
@@ -166,7 +165,6 @@ const canvasProperties: PropertyConfig[] = [
     defaultValue: '#ffffff',
     group: '外观',
   },
-  // 添加内外边距属性 - 使用与组件一致的键名结构
   {
     key: 'style.margin',
     label: '外边距',
@@ -342,7 +340,7 @@ const inputProperties: PropertyConfig[] = [
     group: '基础',
   },
   {
-    key: 'defaultValue',
+    key: 'value',
     label: '默认值',
     type: PropertyType.TEXT,
     group: '基础',

@@ -2,18 +2,23 @@ import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { useStore } from '../../store/useStore';
 import { ComponentInstance, ComponentType } from '../../types';
-import { Input, Typography, Image, Row, Col, QRCode } from 'antd';
+import { Input, Typography, Image, QRCode } from 'antd';
 import styled from 'styled-components';
 import 'react-resizable/css/styles.css';
 interface CanvasComponentProps {
   component: ComponentInstance;
 }
 
-// 修改 ComponentWrapper 样式，使其能够适应容器宽度
 const ComponentWrapper = styled.div<{ isSelected: boolean; ispreview: boolean; isGrid?: boolean }>`
   position: relative;
   display: ${({ isGrid }) => (isGrid ? 'block' : 'inline-block')};
-  gap:4px;
+  width: ${({ isGrid }) => (isGrid ? '100%' : 'auto')};
+    ${({ispreview }) =>
+    ispreview
+      ? `
+    border: none;
+  `
+      : ''}
   ${({ isSelected, ispreview }) =>
     !ispreview && isSelected
       ? `
@@ -49,16 +54,15 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
     }
   };
 
-  // 渲染组件
   const renderComponent = () => {
     const props = {
       ...component.props,
       style: {
-        // ...(component.props.style ? component.props.style : {}),
+        ...(component.props.style ? component.props.style : {}),
         pointerEvents: ispreview ? 'none' : 'auto',
+        ...ispreview?{border:'none'}:{}
       },
     };
-
     switch (component.type) {
       case ComponentType.INPUT:
         return <Input {...props} />;
@@ -66,22 +70,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         return <Typography.Text {...props}>{props.content}</Typography.Text>;
       case ComponentType.IMAGE:
         return <Image {...props} />;
-      case ComponentType.ROW:
-        return (
-          <Row {...props}>
-            {component.children?.map((child) => (
-              <CanvasComponent key={child.id} component={child} />
-            ))}
-          </Row>
-        );
-      case ComponentType.COLUMN:
-        return (
-          <Col {...props}>
-            {component.children?.map((child) => (
-              <CanvasComponent key={child.id} component={child} />
-            ))}
-          </Col>
-        );
       case ComponentType.QRCODE:
         return (
           <QRCode
@@ -93,7 +81,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             style={props.style}
           />
         );
-      // 修改 GRID 组件的渲染部分
       case ComponentType.GRID:
         const cells = props.cells;
 
@@ -105,7 +92,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                 const cellChildren =
                   component.children?.filter((child) => child.props?.cellId === cell.id) || [];
 
-                // 为每个单元格创建独立的拖放区域
                 const [{ isOver }, dropRef] = useDrop({
                   accept: ['COMPONENT', 'CANVAS_COMPONENT'],
                   drop: (item: any, monitor) => {
@@ -116,11 +102,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     console.log('Dropping item:', item);
 
                     if (item.id && !item.id.includes('template')) {
-                      // 移动现有组件到这个单元格
                       console.log('Moving component to cell:', cell.id);
                       moveComponent(item.id, component.id, { cellId: cell.id });
                     } else {
-                      // 添加新组件到这个单元格
                       console.log('Adding new component to cell:', cell.id);
                       const newComponent = {
                         ...item,
@@ -146,7 +130,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     style={{
                       position: 'relative',
                       minHeight: '100px',
-                      border: isOver ? '1px solid #1890ff' : '1px dashed #e8e8e8',
+                      border:ispreview?'': isOver ? '1px solid #1890ff' : '1px dashed #e8e8e8',
                       transition: 'all 0.3s',
                     }}
                   >

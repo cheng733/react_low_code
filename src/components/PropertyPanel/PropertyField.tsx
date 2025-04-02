@@ -1,11 +1,10 @@
 import React from 'react';
-import { Input, Select, Switch, Slider, Radio, Checkbox, InputNumber, Collapse, Tabs, ColorPicker } from 'antd';
+import { Input, Select, Switch, Slider, Radio, Checkbox, InputNumber, ColorPicker } from 'antd';
 import { PropertyConfig, PropertyType } from '../../config/propertyPanelConfig';
 import styled from 'styled-components';
-import { get, set } from 'lodash';
+import { get } from 'lodash';
 
 const { TextArea } = Input;
-const { Panel } = Collapse;
 const { Option } = Select;
 
 const FieldContainer = styled.div`
@@ -139,9 +138,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
           />
         );
 
-      case PropertyType.MARGIN:
-      case PropertyType.PADDING:
-        // 边距设置组件
+      case PropertyType.MARGIN || PropertyType.PADDING:
         const type = config.type === PropertyType.MARGIN ? 'margin' : 'padding';
         const directions = ['Top', 'Right', 'Bottom', 'Left'];
         
@@ -152,7 +149,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
                 <FieldLabel style={{ fontSize: '12px' }}>{direction}</FieldLabel>
                 <Input
                   value={get(componentProps, `style.${type}${direction}`)}
-                  onChange={(e) => onChange(`style.${type}${direction.toLowerCase()}`, e.target.value)}
+                  onChange={(e) => onChange(`style.${type}${direction}`, e.target.value)}
                   placeholder="0px"
                   size="small"
                 />

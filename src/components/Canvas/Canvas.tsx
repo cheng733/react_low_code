@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { useStore } from '../../store/useStore';
 import CanvasComponent from './CanvasComponent';
@@ -11,24 +11,28 @@ const CanvasWrapper = styled.div<{ scale: number; ispreview: boolean }>`
   transform: ${({ scale }) => `scale(${scale})`};
   transform-origin: top center;
   transition: transform 0.3s;
-  margin: 20px auto;
+  margin: ${({ ispreview }) => (ispreview ? '0' : '20px')} auto;
   overflow: auto;
   cursor: ${({ ispreview }) => (ispreview ? 'default' : 'pointer')};
+    ${({ ispreview }) =>
+    ispreview
+      ? `
+    border: none;
+  `
+      : ''}
 `;
 
 const Canvas: React.FC = () => {
   const { components, canvas, addComponent, selectComponent, ispreview } = useStore();
 
-  // 使用 react-dnd 的 useDrop 钩子处理拖放
   const [{ isOver }, drop] = useDrop({
     accept: 'COMPONENT',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     drop: (item: any, monitor) => {
-      // 如果已经被其他组件处理了，不再处理
       if (monitor.didDrop()) {
         return;
       }
 
-      // 添加新组件到画布
       addComponent(item);
     },
     collect: (monitor) => ({
@@ -36,28 +40,24 @@ const Canvas: React.FC = () => {
     }),
   });
 
-  // 处理画布点击事件，取消选中
   const handleCanvasClick = (e: React.MouseEvent) => {
-    // 如果点击的是画布本身，而不是其中的组件，则取消选中
     if (e.target === e.currentTarget) {
       selectComponent(null);
     }
   };
 
-  // 调试输出画布属性
-  useEffect(() => {
-    console.log('Canvas properties:', canvas);
-  }, [canvas]);
 
-  // 准备画布样式
+
   const canvasStyle = {
     width: canvas.width || '800px',
     height: canvas.height || '1200px',
     backgroundColor: canvas.backgroundColor || '#fff',
     border: isOver && !ispreview ? '2px dashed #1890ff' : '1px solid #e8e8e8',
+    padding: canvas.padding || '0',
+    margin: canvas.margin || '0',
   };
 
-  // 合并样式对象
+
   if (canvas.style) {
     Object.assign(canvasStyle, canvas.style);
   }

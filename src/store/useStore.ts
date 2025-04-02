@@ -10,19 +10,12 @@ import {
 } from '../types';
 
 interface EditorState {
-  // 画布上的组件
   components: ComponentInstance[];
-  // 当前选中的组件ID
   selectedId: string | null;
-  // 画布状态
-  canvas: CanvasState;
-  // 历史记录
+  canvas: Partial<CanvasState>;
   history: HistoryItem[];
-  // 当前历史记录索引
   historyIndex: number;
-  // 是否处于预览模式
   ispreview: boolean;
-  // 是否显示代码预览
   showCodePreview: boolean;
 
   // Actions
@@ -31,13 +24,17 @@ interface EditorState {
   updateComponent: (id: string, props: Partial<ComponentInstance>) => void;
   updateCanvas: (updates: Partial<CanvasState>) => void;
   selectComponent: (id: string | null) => void;
-  moveComponent: (id: string, parentId: string | null, options?: {
-    index?: number;
-    cellId?: string;
-    position?: 'top' | 'right' | 'bottom' | 'left' | 'next-line';
-    targetId?: string;
-    isSwap?: boolean;
-  }) => void;
+  moveComponent: (
+    id: string,
+    parentId: string | null,
+    options?: {
+      index?: number;
+      cellId?: string;
+      position?: 'top' | 'right' | 'bottom' | 'left' | 'next-line';
+      targetId?: string;
+      isSwap?: boolean;
+    },
+  ) => void;
   setCanvasSize: (size: CanvasSize) => void;
   undo: () => void;
   redo: () => void;
@@ -47,11 +44,10 @@ interface EditorState {
   importFromJSON: (json: string) => void;
 }
 
-// 画布尺寸配置
 const canvasSizeConfig: Record<CanvasSize, { width: number; height: number }> = {
-  [CanvasSize.A4]: { width: 794, height: 1123 }, // A4 尺寸 (px)
-  [CanvasSize.A5]: { width: 559, height: 794 }, // A5 尺寸 (px)
-  [CanvasSize.FIVE_JOINT]: { width: 400, height: 300 }, // 五联纸尺寸 (px)
+  [CanvasSize.A4]: { width: 794, height: 1123 },
+  [CanvasSize.A5]: { width: 559, height: 794 },
+  [CanvasSize.FIVE_JOINT]: { width: 400, height: 300 },
 };
 
 export const useStore = create<EditorState>()(
@@ -146,7 +142,7 @@ export const useStore = create<EditorState>()(
             return comp;
           });
         };
-    
+
         // 选中指定组件
         const selectById = (components: ComponentInstance[], id: string | null) => {
           return components.map((comp) => {
@@ -159,7 +155,7 @@ export const useStore = create<EditorState>()(
             return comp;
           });
         };
-    
+
         state.components = unselectAll(state.components);
         if (id) {
           state.components = selectById(state.components, id);
@@ -194,7 +190,6 @@ export const useStore = create<EditorState>()(
           return [newComponents, foundComponent];
         };
 
-        // 查找父组件并添加组件
         const findParentAndAddComponent = (
           components: ComponentInstance[],
           parentId: string,
@@ -208,9 +203,7 @@ export const useStore = create<EditorState>()(
           } = {},
         ): ComponentInstance[] => {
           return components.map((comp) => {
-            // 处理 isSwap 标志，如果设置了 isSwap 且有 targetId，则进行组件位置交换
             if (options.isSwap && options.targetId && comp.id === options.targetId) {
-              // 如果是栅格容器，处理单元格
               if (options.cellId) {
                 component.props = {
                   ...component.props,
@@ -221,10 +214,10 @@ export const useStore = create<EditorState>()(
               // 查找目标组件的父组件
               const findParentComponent = (
                 comps: ComponentInstance[],
-                childId: string
+                childId: string,
               ): ComponentInstance | null => {
                 for (const c of comps) {
-                  if (c.children && c.children.some(child => child.id === childId)) {
+                  if (c.children && c.children.some((child) => child.id === childId)) {
                     return c;
                   }
                   if (c.children) {
@@ -237,13 +230,13 @@ export const useStore = create<EditorState>()(
 
               // 查找目标组件的父组件
               const targetParent = findParentComponent(state.components, options.targetId);
-              
+
               if (targetParent && targetParent.children) {
                 // 查找目标组件在父组件中的索引
                 const targetIndex = targetParent.children.findIndex(
-                  child => child.id === options.targetId
+                  (child) => child.id === options.targetId,
                 );
-                
+
                 if (targetIndex !== -1) {
                   // 处理 next-line 位置
                   if (options.position === 'next-line') {
@@ -255,15 +248,15 @@ export const useStore = create<EditorState>()(
                         display: 'block',
                         width: 'auto',
                         marginTop: '4px',
-                        clear: 'both' // 确保组件显示在新行
-                      }
+                        clear: 'both', // 确保组件显示在新行
+                      },
                     };
-                    
+
                     // 将组件插入到目标位置后面
                     targetParent.children = [
                       ...targetParent.children.slice(0, targetIndex + 1),
                       component,
-                      ...targetParent.children.slice(targetIndex + 1)
+                      ...targetParent.children.slice(targetIndex + 1),
                     ];
                   } else {
                     // 根据位置确定插入位置
@@ -271,31 +264,31 @@ export const useStore = create<EditorState>()(
                     if (options.position === 'bottom' || options.position === 'right') {
                       insertIndex = targetIndex + 1;
                     }
-                    
+
                     // 将组件插入到目标位置
                     targetParent.children = [
                       ...targetParent.children.slice(0, insertIndex),
                       component,
-                      ...targetParent.children.slice(insertIndex)
+                      ...targetParent.children.slice(insertIndex),
                     ];
                   }
-                  
+
                   // 更新组件的父组件ID
                   component.parentId = targetParent.id;
-                  
+
                   // 如果有单元格ID，确保设置正确
                   if (options.cellId) {
                     component.props = {
                       ...component.props,
-                      cellId: options.cellId
+                      cellId: options.cellId,
                     };
                   }
-                  
+
                   return comp;
                 }
               }
             }
-            
+
             // 原有逻辑：如果找到指定的父组件，将组件添加到其子组件列表中
             if (comp.id === parentId) {
               // 如果是栅格容器，处理单元格
@@ -310,9 +303,9 @@ export const useStore = create<EditorState>()(
               // 如果指定了位置，根据位置调整顺序
               if (options.position && options.targetId && comp.children) {
                 const targetIndex = comp.children.findIndex(
-                  child => child.id === options.targetId
+                  (child) => child.id === options.targetId,
                 );
-                
+
                 if (targetIndex !== -1) {
                   // 处理 next-line 位置
                   if (options.position === 'next-line') {
@@ -324,15 +317,15 @@ export const useStore = create<EditorState>()(
                         display: 'block',
                         width: 'auto',
                         marginTop: '4px',
-                        clear: 'both' // 确保组件显示在新行
-                      }
+                        clear: 'both', // 确保组件显示在新行
+                      },
                     };
-                    
+
                     // 将组件插入到目标位置后面
                     comp.children = [
                       ...comp.children.slice(0, targetIndex + 1),
                       component,
-                      ...comp.children.slice(targetIndex + 1)
+                      ...comp.children.slice(targetIndex + 1),
                     ];
                   } else {
                     // 根据位置确定插入位置
@@ -340,12 +333,12 @@ export const useStore = create<EditorState>()(
                     if (options.position === 'bottom' || options.position === 'right') {
                       insertIndex = targetIndex + 1;
                     }
-                    
+
                     // 将组件插入到目标位置
                     comp.children = [
                       ...comp.children.slice(0, insertIndex),
                       component,
-                      ...comp.children.slice(insertIndex)
+                      ...comp.children.slice(insertIndex),
                     ];
                   }
                 } else {
@@ -363,10 +356,10 @@ export const useStore = create<EditorState>()(
                 // 否则添加到末尾
                 comp.children = [...(comp.children || []), component];
               }
-              
+
               // 更新组件的父组件ID
               component.parentId = comp.id;
-              
+
               // 更新容器高度以适应子组件
               comp.props = {
                 ...comp.props,
@@ -377,9 +370,9 @@ export const useStore = create<EditorState>()(
                     (comp.children || []).reduce((sum, child) => {
                       const height = child.props?.style?.height || 0;
                       return sum + (typeof height === 'number' ? height : 0);
-                    }, 0)
-                  )
-                }
+                    }, 0),
+                  ),
+                },
               };
             } else if (comp.children) {
               // 递归查找父组件
@@ -405,10 +398,10 @@ export const useStore = create<EditorState>()(
             // 查找目标组件所在的父组件
             const findTargetParent = (
               comps: ComponentInstance[],
-              targetId: string
+              targetId: string,
             ): string | null => {
               for (const c of comps) {
-                if (c.children && c.children.some(child => child.id === targetId)) {
+                if (c.children && c.children.some((child) => child.id === targetId)) {
                   return c.id;
                 }
                 if (c.children) {
@@ -418,15 +411,15 @@ export const useStore = create<EditorState>()(
               }
               return null;
             };
-            
+
             const targetParentId = findTargetParent(state.components, options.targetId) || parentId;
-            
+
             // 使用目标组件的父组件ID
             state.components = findParentAndAddComponent(
               state.components,
               targetParentId,
               foundComponent,
-              options
+              options,
             );
           } else {
             // 使用指定的父组件ID
@@ -434,7 +427,7 @@ export const useStore = create<EditorState>()(
               state.components,
               parentId || '',
               foundComponent,
-              options
+              options,
             );
           }
 
@@ -530,7 +523,7 @@ export const useStore = create<EditorState>()(
       }
     },
     addComponent: (component: Partial<ComponentInstance>, cellId?: string) => {
-      const newComponent: ComponentInstance = {
+      const newComponent: Partial<ComponentInstance> = {
         id: `${component.type}-${Date.now()}`,
         type: component.type!,
         category: component.category!,
@@ -541,34 +534,39 @@ export const useStore = create<EditorState>()(
         children: component.children || [],
         parentId: component.parentId || null,
       };
-      
+
       set((state) => {
-        // 检查添加组件后是否会超出画布高度
         const willExceedCanvasHeight = () => {
-          // 如果是添加到根级别，计算所有根组件高度总和
           if (!newComponent.parentId) {
             const totalHeight = state.components.reduce((sum, comp) => {
               const height = comp.props?.style?.height || 0;
               return sum + (typeof height === 'number' ? height : 0);
             }, 0);
-            
+
             const newComponentHeight = newComponent.props?.style?.height || 0;
-            return totalHeight + (typeof newComponentHeight === 'number' ? newComponentHeight : 0) > state.canvas.height;
+            return (
+              totalHeight + (typeof newComponentHeight === 'number' ? newComponentHeight : 0) >
+              state.canvas.height
+            );
           }
-          
-          // 如果是添加到容器中，递归查找父容器并计算高度
-          const calculateContainerHeight = (components: ComponentInstance[], parentId: string): number => {
+
+          const calculateContainerHeight = (
+            components: ComponentInstance[],
+            parentId: string,
+          ): number => {
             for (const comp of components) {
               if (comp.id === parentId) {
                 const childrenHeight = (comp.children || []).reduce((sum, child) => {
                   const height = child.props?.style?.height || 0;
                   return sum + (typeof height === 'number' ? height : 0);
                 }, 0);
-                
+
                 const newComponentHeight = newComponent.props?.style?.height || 0;
-                return childrenHeight + (typeof newComponentHeight === 'number' ? newComponentHeight : 0);
+                return (
+                  childrenHeight + (typeof newComponentHeight === 'number' ? newComponentHeight : 0)
+                );
               }
-              
+
               if (comp.children && comp.children.length > 0) {
                 const height = calculateContainerHeight(comp.children, parentId);
                 if (height > 0) return height;
@@ -576,28 +574,29 @@ export const useStore = create<EditorState>()(
             }
             return 0;
           };
-          
+
           if (newComponent.parentId) {
-            const containerHeight = calculateContainerHeight(state.components, newComponent.parentId);
+            const containerHeight = calculateContainerHeight(
+              state.components,
+              newComponent.parentId,
+            );
             return containerHeight > state.canvas.height;
           }
-          
+
           return false;
         };
-        
-        // 如果添加组件会超出画布高度，则不添加
+
+
         if (willExceedCanvasHeight()) {
           console.warn('添加组件将超出画布高度限制，无法添加');
           return;
         }
-        
-        // 如果指定了父组件ID，则添加到父组件的children中
+
         if (newComponent.parentId) {
-          // 递归查找父组件并添加子组件
           const addChildToParent = (
             components: ComponentInstance[],
             parentId: string,
-            child: ComponentInstance
+            child: ComponentInstance,
           ): ComponentInstance[] => {
             return components.map((comp) => {
               if (comp.id === parentId) {
@@ -612,13 +611,13 @@ export const useStore = create<EditorState>()(
                       // 更新容器高度以适应子组件
                       height: Math.min(
                         state.canvas.height,
-                        ((comp.children || []).reduce((sum, c) => {
+                        (comp.children || []).reduce((sum, c) => {
                           const height = c.props?.style?.height || 0;
                           return sum + (typeof height === 'number' ? height : 0);
-                        }, 0) + (child.props?.style?.height || 0))
-                      )
-                    }
-                  }
+                        }, 0) + (child.props?.style?.height || 0),
+                      ),
+                    },
+                  },
                 };
               }
               if (comp.children && comp.children.length > 0) {
@@ -628,8 +627,12 @@ export const useStore = create<EditorState>()(
               return comp;
             });
           };
-          
-          state.components = addChildToParent(state.components, newComponent.parentId, newComponent);
+
+          state.components = addChildToParent(
+            state.components,
+            newComponent.parentId,
+            newComponent,
+          );
         } else {
           // 如果没有指定父组件，则添加到根级别
           state.components.push(newComponent);
@@ -648,7 +651,7 @@ export const useStore = create<EditorState>()(
         state.selectedId = newComponent.id;
       });
       get().selectComponent(newComponent.id);
-    },  
+    },
     // 添加删除组件方法
     deleteComponent: (id: string) => {},
     // 添加复制组件方法
@@ -656,14 +659,14 @@ export const useStore = create<EditorState>()(
     updateCanvas: (updates) => {
       set((state) => {
         const newCanvas = { ...state.canvas };
-        
+
         // 处理普通属性
-        Object.keys(updates).forEach(key => {
+        Object.keys(updates).forEach((key) => {
           if (key !== 'style') {
             newCanvas[key] = updates[key];
           }
         });
-        
+
         // 处理样式属性
         if (updates.style) {
           if (!newCanvas.style) {
@@ -671,7 +674,7 @@ export const useStore = create<EditorState>()(
           }
           newCanvas.style = { ...newCanvas.style, ...updates.style };
         }
-        
+
         console.log('Updated canvas:', newCanvas);
         return { canvas: newCanvas };
       });

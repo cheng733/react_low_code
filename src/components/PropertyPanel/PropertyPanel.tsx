@@ -30,9 +30,8 @@ const PropertyGroup = styled.div`
 `;
 
 const PropertyPanel: React.FC = () => {
-  const { components, selectedId, updateComponent, canvas,updateCanvas } = useStore();
+  const { components, selectedId, updateComponent, canvas, updateCanvas } = useStore();
 
-  // 查找选中的组件
   const selectedComponent = useMemo(() => {
     if (!selectedId) return null;
 
@@ -52,10 +51,8 @@ const PropertyPanel: React.FC = () => {
     return findComponent(components);
   }, [components, selectedId]);
 
-  // 根据组件类型获取属性配置
   const propertyConfigs = useMemo(() => {
     if (!selectedComponent) {
-      // 如果没有选中组件，返回画布属性配置
       return getPropertyConfigByType(ComponentType.CANVAS);
     }
     return getPropertyConfigByType(selectedComponent.type);
@@ -64,15 +61,15 @@ const PropertyPanel: React.FC = () => {
   // 按组分组属性
   const groupedProperties = useMemo(() => {
     const groups: Record<string, PropertyConfig[]> = {};
-    
-    propertyConfigs.forEach(config => {
+
+    propertyConfigs.forEach((config) => {
       const group = config.group || '基础';
       if (!groups[group]) {
         groups[group] = [];
       }
       groups[group].push(config);
     });
-    
+
     return groups;
   }, [propertyConfigs]);
 
@@ -97,17 +94,13 @@ const PropertyPanel: React.FC = () => {
       updateCanvas(updates);
       return;
     }
-  
-    // 更新组件属性
+
     const updatedProps = cloneDeep(selectedComponent.props || {});
-    
-    // 处理嵌套属性 (如 style.width)
+
     set(updatedProps, key, value);
-    
     updateComponent(selectedComponent.id, { props: updatedProps });
   };
 
-  // 获取面板标题
   const getPanelTitle = () => {
     if (selectedComponent) {
       return `${selectedComponent.type} 属性`;
@@ -122,7 +115,7 @@ const PropertyPanel: React.FC = () => {
         {Object.entries(groupedProperties).map(([group, configs]) => (
           <Panel header={group} key={group}>
             <PropertyGroup>
-              {configs.map(config => (
+              {configs.map((config) => (
                 <PropertyField
                   key={config.key}
                   config={config}
