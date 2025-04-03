@@ -78,7 +78,7 @@ const Header: React.FC = () => {
     code += `import { Input, Typography, Image, QRCode } from 'antd';\n\n`;
     code += `const GeneratedComponent = () => {\n`;
     code += `  return (\n`;
-    code += `    <div style={{ width: '${json.canvas.width}px', height: '${json.canvas.height}px' }}>\n`;
+    code += `    <div style={{ width: '${json.canvas.width}px', height: '${json.canvas.height}px', padding: '${json.canvas.padding || '0px'}' }}>\n`;
     
     // 递归生成组件代码
     const generateComponentCode = (components, indent = 6) => {
@@ -88,23 +88,45 @@ const Header: React.FC = () => {
         const style = comp.props?.style ? JSON.stringify(comp.props.style) : '{}';
         
         switch (comp.type) {
-          case 'TEXT':
+          case 'text':
             componentCode += `${indentStr}<Typography.Text style={${style}}>${comp.props?.content || ''}</Typography.Text>\n`;
             break;
-          case 'INPUT':
+          case 'input':
             componentCode += `${indentStr}<Input style={${style}} placeholder="${comp.props?.placeholder || ''}" />\n`;
             break;
-          case 'IMAGE':
+          case 'image':
             componentCode += `${indentStr}<Image style={${style}} src="${comp.props?.src || ''}" />\n`;
             break;
-          case 'QRCODE':
+          case 'qrcode':
             componentCode += `${indentStr}<QRCode style={${style}} value="${comp.props?.value || 'https://baidu.com'}" />\n`;
             break;
-          case 'GRID':
-            componentCode += `${indentStr}<div style={{ display: 'flex', ...${style} }}>\n`;
-            if (comp.children && comp.children.length > 0) {
+          case 'grid':
+            const cells = comp.props?.cells || [];
+            componentCode += `${indentStr}<div style={${style}} className="grid-container">\n`;
+            
+            // 处理网格单元格
+            if (cells.length > 0) {
+              componentCode += `${indentStr}  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '${(comp.props?.gutter?.[0] || 16)}px' }}>\n`;
+              
+              cells.forEach(cell => {
+                const cellWidth = (cell.span / 24) * 100;
+                componentCode += `${indentStr}    <div style={{ width: '${cellWidth}%', marginBottom: '${(comp.props?.gutter?.[1] || 16)}px' }}>\n`;
+                
+                // 查找属于该单元格的子组件
+                const cellChildren = comp.children?.filter(child => child.props?.cellId === cell.id) || [];
+                if (cellChildren.length > 0) {
+                  componentCode += generateComponentCode(cellChildren, indent + 6);
+                }
+                
+                componentCode += `${indentStr}    </div>\n`;
+              });
+              
+              componentCode += `${indentStr}  </div>\n`;
+            } else if (comp.children && comp.children.length > 0) {
+              // 如果没有单元格但有子组件
               componentCode += generateComponentCode(comp.children, indent + 2);
             }
+            
             componentCode += `${indentStr}</div>\n`;
             break;
           default:
