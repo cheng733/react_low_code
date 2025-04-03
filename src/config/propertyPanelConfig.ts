@@ -1,6 +1,5 @@
 import { ComponentType } from '../types';
 
-// 属性类型定义
 export enum PropertyType {
   TEXT = 'text',           // 文本输入
   NUMBER = 'number',       // 数字输入
@@ -19,8 +18,6 @@ export enum PropertyType {
   LAYOUT = 'layout',       // 布局设置
   CUSTOM = 'custom',       // 自定义组件
 }
-
-// 属性配置接口
 export interface PropertyConfig {
   key: string;             // 属性键名
   label: string;           // 属性标签
@@ -40,13 +37,11 @@ export interface PropertyConfig {
   onChange?: (value: any, props: any) => any; // 值变化时的回调
 }
 
-// 组件属性面板配置
 export interface ComponentPropertyConfig {
-  type: ComponentType;     // 组件类型
-  properties: PropertyConfig[]; // 属性配置列表
+  type: ComponentType;
+  properties: PropertyConfig[]; 
 }
 
-// 通用样式属性
 const commonStyleProperties: PropertyConfig[] = [
   {
     key: 'style.width',
@@ -176,8 +171,8 @@ const canvasProperties: PropertyConfig[] = [
     label: '内边距',
     type: PropertyType.PADDING,
     group: '间距',
+    defaultValue:'10px'
   },
-  // 添加字体相关属性 - 使用与组件一致的键名结构
   {
     key: 'style.fontSize',
     label: '默认字体大小',
@@ -255,7 +250,6 @@ const canvasProperties: PropertyConfig[] = [
   },
 ];
 
-// 文本组件属性配置
 const textProperties: PropertyConfig[] = [
   {
     key: 'content',
@@ -286,51 +280,6 @@ const textProperties: PropertyConfig[] = [
   ...commonStyleProperties,
 ];
 
-// 按钮组件属性配置
-const buttonProperties: PropertyConfig[] = [
-  {
-    key: 'text',
-    label: '按钮文本',
-    type: PropertyType.TEXT,
-    defaultValue: '按钮',
-    group: '基础',
-  },
-  {
-    key: 'type',
-    label: '按钮类型',
-    type: PropertyType.SELECT,
-    options: [
-      { label: '默认', value: 'default' },
-      { label: '主要', value: 'primary' },
-      { label: '虚线', value: 'dashed' },
-      { label: '文本', value: 'text' },
-      { label: '链接', value: 'link' },
-    ],
-    group: '基础',
-  },
-  {
-    key: 'size',
-    label: '按钮大小',
-    type: PropertyType.RADIO,
-    options: [
-      { label: '大', value: 'large' },
-      { label: '中', value: 'middle' },
-      { label: '小', value: 'small' },
-    ],
-    defaultValue: 'middle',
-    group: '基础',
-  },
-  {
-    key: 'disabled',
-    label: '禁用状态',
-    type: PropertyType.SWITCH,
-    defaultValue: false,
-    group: '状态',
-  },
-  ...commonStyleProperties,
-];
-
-// 输入框组件属性配置
 const inputProperties: PropertyConfig[] = [
   {
     key: 'placeholder',
@@ -362,86 +311,26 @@ const inputProperties: PropertyConfig[] = [
   ...commonStyleProperties,
 ];
 
-// 栅格容器属性配置
 const gridProperties: PropertyConfig[] = [
-  {
-    key: 'cells',
-    label: '单元格配置',
-    type: PropertyType.CUSTOM,
-    group: '基础',
-  },
-  {
-    key: 'gutter',
-    label: '单元格间距',
-    type: PropertyType.NUMBER,
-    defaultValue: 0,
-    min: 0,
-    max: 48,
-    step: 8,
-    group: '基础',
-  },
+  // {
+  //   key: 'cells',
+  //   label: '单元格配置',
+  //   type: PropertyType.CUSTOM,
+  //   group: '基础',
+  // },
+  // {
+  //   key: 'gutter',
+  //   label: '单元格间距',
+  //   type: PropertyType.NUMBER,
+  //   defaultValue: 0,
+  //   min: 0,
+  //   max: 48,
+  //   step: 8,
+  //   group: '基础',
+  // },
   ...commonStyleProperties,
 ];
 
-// 容器组件属性配置
-const containerProperties: PropertyConfig[] = [
-  {
-    key: 'style.flexDirection',
-    label: '排列方向',
-    type: PropertyType.RADIO,
-    options: [
-      { label: '水平', value: 'row' },
-      { label: '垂直', value: 'column' },
-    ],
-    defaultValue: 'row',
-    group: '布局',
-    condition: (props) => props.style?.display === 'flex',
-  },
-  {
-    key: 'style.justifyContent',
-    label: '主轴对齐',
-    type: PropertyType.SELECT,
-    options: [
-      { label: '起始', value: 'flex-start' },
-      { label: '居中', value: 'center' },
-      { label: '末尾', value: 'flex-end' },
-      { label: '两端', value: 'space-between' },
-      { label: '环绕', value: 'space-around' },
-    ],
-    defaultValue: 'flex-start',
-    group: '布局',
-    condition: (props) => props.style?.display === 'flex',
-  },
-  {
-    key: 'style.alignItems',
-    label: '交叉轴对齐',
-    type: PropertyType.SELECT,
-    options: [
-      { label: '起始', value: 'flex-start' },
-      { label: '居中', value: 'center' },
-      { label: '末尾', value: 'flex-end' },
-      { label: '拉伸', value: 'stretch' },
-    ],
-    defaultValue: 'flex-start',
-    group: '布局',
-    condition: (props) => props.style?.display === 'flex',
-  },
-  {
-    key: 'style.flexWrap',
-    label: '换行方式',
-    type: PropertyType.RADIO,
-    options: [
-      { label: '不换行', value: 'nowrap' },
-      { label: '换行', value: 'wrap' },
-    ],
-    defaultValue: 'nowrap',
-    group: '布局',
-    condition: (props) => props.style?.display === 'flex',
-  },
-  ...commonStyleProperties,
-];
-
-// 图片组件属性配置
 const imageProperties: PropertyConfig[] = [
   {
     key: 'src',
@@ -466,8 +355,22 @@ const imageProperties: PropertyConfig[] = [
   },
   ...commonStyleProperties,
 ];
-
-// 所有组件的属性配置
+const qrcodeProperties: PropertyConfig[] = [
+  {
+    key:'value',
+    label: '二维码地址',
+    type: PropertyType.TEXT,
+    placeholder: '请输入二维码URL',
+    group: '基础',
+  },
+  {
+    key:'size',
+    label: '二维码大小',
+    type: PropertyType.NUMBER,
+    placeholder: '请输入二维码大小',
+    group: '基础',
+  }
+]
 export const componentPropertyConfigs: ComponentPropertyConfig[] = [
   {
     type: ComponentType.CANVAS,
@@ -480,6 +383,10 @@ export const componentPropertyConfigs: ComponentPropertyConfig[] = [
   {
     type: ComponentType.INPUT,
     properties: inputProperties,
+  },
+  {
+    type: ComponentType.QRCODE,
+    properties: qrcodeProperties,
   },
   {
     type: ComponentType.GRID,
@@ -495,7 +402,6 @@ export const componentPropertyConfigs: ComponentPropertyConfig[] = [
   },
 ];
 
-// 根据组件类型获取属性配置
 export const getPropertyConfigByType = (type: ComponentType): PropertyConfig[] => {
   const config = componentPropertyConfigs.find(config => config.type === type);
   return config ? config.properties : [];

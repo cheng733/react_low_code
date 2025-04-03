@@ -1,5 +1,5 @@
-import React from 'react';
-import { Space, Button, Radio, Tooltip } from 'antd';
+import React, { useState } from 'react';
+import { Space, Button, Radio, Tooltip, Modal, Tabs } from 'antd';
 import {
   EyeOutlined,
   PrinterOutlined,
@@ -11,6 +11,7 @@ import {
 import { useStore } from '../../store/useStore';
 import { CanvasSize } from '../../types';
 import styled from 'styled-components';
+import {useReactToPrint} from 'react-to-print';
 
 const HeaderContainer = styled.div`
   padding: 8px 16px;
@@ -22,20 +23,32 @@ const HeaderContainer = styled.div`
   flex: 0 0 50px;
 `;
 
+const CodePreview = styled.pre`
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 500px;
+  font-family: 'Courier New', Courier, monospace;
+`;
+
 const Header: React.FC = () => {
   const {
     canvas,
     setCanvasSize,
     togglePreview,
-    toggleCodePreview,
     undo,
     redo,
     exportToJSON,
     ispreview,
+    contentRef
   } = useStore();
-
+  
+  const [codePreviewVisible, setCodePreviewVisible] = useState(false);
+  
+  const reactToPrintFn = useReactToPrint({ contentRef });
   const handlePrint = () => {
-    window.print();
+    reactToPrintFn()
   };
 
   const handleExport = () => {
@@ -49,6 +62,65 @@ const Header: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+  
+  // 处理代码预览
+  const handleCodePreview = () => {
+    setCodePreviewVisible(true);
+  };
+
+  // 生成React代码
+  const generateReactCode = () => {
+    const json = JSON.parse(exportToJSON());
+    
+    // 简单的代码生成逻辑
+    let code = `import React from 'react';\n`;
+    code += `import { Input, Typography, Image, QRCode } from 'antd';\n\n`;
+    code += `const GeneratedComponent = () => {\n`;
+    code += `  return (\n`;
+    code += `    <div style={{ width: '${json.canvas.width}px', height: '${json.canvas.height}px' }}>\n`;
+    
+    // 递归生成组件代码
+    const generateComponentCode = (components, indent = 6) => {
+      let componentCode = '';
+      components.forEach(comp => {
+        const indentStr = ' '.repeat(indent);
+        const style = comp.props?.style ? JSON.stringify(comp.props.style) : '{}';
+        
+        switch (comp.type) {
+          case 'TEXT':
+            componentCode += `${indentStr}<Typography.Text style={${style}}>${comp.props?.content || ''}</Typography.Text>\n`;
+            break;
+          case 'INPUT':
+            componentCode += `${indentStr}<Input style={${style}} placeholder="${comp.props?.placeholder || ''}" />\n`;
+            break;
+          case 'IMAGE':
+            componentCode += `${indentStr}<Image style={${style}} src="${comp.props?.src || ''}" />\n`;
+            break;
+          case 'QRCODE':
+            componentCode += `${indentStr}<QRCode style={${style}} value="${comp.props?.value || 'https://baidu.com'}" />\n`;
+            break;
+          case 'GRID':
+            componentCode += `${indentStr}<div style={{ display: 'flex', ...${style} }}>\n`;
+            if (comp.children && comp.children.length > 0) {
+              componentCode += generateComponentCode(comp.children, indent + 2);
+            }
+            componentCode += `${indentStr}</div>\n`;
+            break;
+          default:
+            componentCode += `${indentStr}<div style={${style}}></div>\n`;
+        }
+      });
+      return componentCode;
+    };
+    
+    code += generateComponentCode(json.components);
+    code += `    </div>\n`;
+    code += `  );\n`;
+    code += `};\n\n`;
+    code += `export default GeneratedComponent;`;
+    
+    return code;
   };
 
   return (
@@ -85,9 +157,34 @@ const Header: React.FC = () => {
           <Button icon={<SaveOutlined />} onClick={handleExport} />
         </Tooltip>
         <Tooltip title="代码预览">
-          <Button icon={<CodeOutlined />} onClick={toggleCodePreview} />
+          <Button icon={<CodeOutlined />} onClick={handleCodePreview} />
         </Tooltip>
       </Space>
+      
+      {/* 代码预览弹窗 */}
+      <Modal
+        title="代码预览"
+        open={codePreviewVisible}
+        onCancel={() => setCodePreviewVisible(false)}
+        width={800}
+        footer={null}
+      >
+        <Tabs
+          defaultActiveKey="react"
+          items={[
+            {
+              key: 'react',
+              label: 'React 代码',
+              children: <CodePreview>{generateReactCode()}</CodePreview>,
+            },
+            {
+              key: 'json',
+              label: 'JSON 数据',
+              children: <CodePreview>{JSON.stringify(JSON.parse(exportToJSON()), null, 2)}</CodePreview>,
+            },
+          ]}
+        />
+      </Modal>
     </HeaderContainer>
   );
 };

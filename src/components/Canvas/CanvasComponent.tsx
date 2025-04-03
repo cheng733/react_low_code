@@ -5,6 +5,8 @@ import { ComponentInstance, ComponentType } from '../../types';
 import { Input, Typography, Image, QRCode } from 'antd';
 import styled from 'styled-components';
 import 'react-resizable/css/styles.css';
+import { DeleteOutlined } from '@ant-design/icons';
+import { set, cloneDeep } from 'lodash';
 interface CanvasComponentProps {
   component: ComponentInstance;
 }
@@ -13,7 +15,7 @@ const ComponentWrapper = styled.div<{ isSelected: boolean; ispreview: boolean; i
   position: relative;
   display: ${({ isGrid }) => (isGrid ? 'block' : 'inline-block')};
   width: ${({ isGrid }) => (isGrid ? '100%' : 'auto')};
-    ${({ispreview }) =>
+  ${({ ispreview }) =>
     ispreview
       ? `
     border: none;
@@ -37,35 +39,39 @@ const ComponentWrapper = styled.div<{ isSelected: boolean; ispreview: boolean; i
       : ''}
 `;
 
-
 const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
-  const { selectComponent, selectedId, addComponent, moveComponent, ispreview, updateComponent } =
+  const { selectComponent, selectedId, addComponent, moveComponent, ispreview,updateComponent, deleteComponent } =
     useStore();
   const componentRef = useRef<HTMLDivElement>(null);
   const [dropPosition, setDropPosition] = React.useState<
     'top' | 'right' | 'bottom' | 'left' | 'next-line' | null
   >(null);
 
-  // 组件点击处理
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!ispreview) {
       selectComponent(component.id);
     }
   };
+  const handleChange = (newValue: any) => {
+    const updatedProps = cloneDeep(component.props || {});
+    set(updatedProps, 'value', newValue);
+    updateComponent(component.id, { props: updatedProps });
+  };
 
   const renderComponent = () => {
+    console.log(component.props,'component.props')
     const props = {
       ...component.props,
       style: {
         ...(component.props.style ? component.props.style : {}),
         pointerEvents: ispreview ? 'none' : 'auto',
-        ...ispreview?{border:'none'}:{}
+        ...(ispreview ? { border: 'none',backgroundColor:"#fff" } : {}),
       },
     };
     switch (component.type) {
       case ComponentType.INPUT:
-        return <Input {...props} />;
+        return <Input {...props} onChange={(e) => handleChange(e.target.value)} {...(ispreview ? { type: 'text' } : {})} />;
       case ComponentType.TEXT:
         return <Typography.Text {...props}>{props.content}</Typography.Text>;
       case ComponentType.IMAGE:
@@ -83,12 +89,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         );
       case ComponentType.GRID:
         const cells = props.cells;
-
+        console.log(props.style,'grid')
         return (
-          <div className="grid-container" style={{ ...props.style, width: '100%' }}>
+          <div className="grid-container" style={{ ...props.style, width: '100%',height:'100%' }}>
             <div>
               {cells.map((cell, index) => {
-                const isLastCell = index === cells.length - 1;
                 const cellChildren =
                   component.children?.filter((child) => child.props?.cellId === cell.id) || [];
 
@@ -98,14 +103,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     if (monitor.didDrop()) {
                       return;
                     }
-
-                    console.log('Dropping item:', item);
-
                     if (item.id && !item.id.includes('template')) {
-                      console.log('Moving component to cell:', cell.id);
                       moveComponent(item.id, component.id, { cellId: cell.id });
                     } else {
-                      console.log('Adding new component to cell:', cell.id);
                       const newComponent = {
                         ...item,
                         id: undefined,
@@ -130,7 +130,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     style={{
                       position: 'relative',
                       minHeight: '100px',
-                      border:ispreview?'': isOver ? '1px solid #1890ff' : '1px dashed #e8e8e8',
+                      border: ispreview ? '' : isOver ? '1px solid #1890ff' : '1px dashed #e8e8e8',
                       transition: 'all 0.3s',
                     }}
                   >
@@ -143,8 +143,10 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                         position: 'relative',
                       }}
                     >
-                      {/* 单元格内容区域 */}
-                      <div className="cell-content" style={{gap:'4px',display:'flex',flexWrap:"wrap"}}>
+                      <div
+                        className="cell-content"
+                        style={{ gap: '4px', display: 'flex', flexWrap: 'wrap' }}
+                      >
                         {cellChildren.length > 0 ? (
                           cellChildren.map((child) => (
                             <CanvasComponent key={child.id} component={child} />
@@ -155,7 +157,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                               display: 'flex',
                               justifyContent: 'center',
                               alignItems: 'center',
-                              width:"100%",
+                              width: '100%',
                               height: '100%',
                               minHeight: '100px',
                               color: '#999',
@@ -167,67 +169,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                         )}
                       </div>
                     </div>
-
-                    {/* 拖拽调整宽度的手柄 */}
-                    {!isLastCell && !ispreview && (
-                      <div
-                        className="resize-handle"
-                        style={{
-                          position: 'absolute',
-                          right: '-5px',
-                          top: 0,
-                          bottom: 0,
-                          width: '10px',
-                          cursor: 'col-resize',
-                          zIndex: 100,
-                        }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-
-                          const startX = e.clientX;
-                          const startSpan = cell.span;
-                          const nextCell = cells[index + 1];
-                          const nextSpan = nextCell.span;
-                          const totalSpan = startSpan + nextSpan;
-
-                          const handleMouseMove = (moveEvent) => {
-                            const containerWidth =
-                              e.currentTarget.parentElement.parentElement.clientWidth;
-                            const deltaX = moveEvent.clientX - startX;
-                            const deltaSpan = Math.round((deltaX / containerWidth) * 24);
-
-                            if (deltaSpan !== 0) {
-                              const newSpan = Math.max(
-                                1,
-                                Math.min(totalSpan - 1, startSpan + deltaSpan),
-                              );
-                              const newNextSpan = totalSpan - newSpan;
-
-                              // 更新组件状态
-                              const updatedCells = [...cells];
-                              updatedCells[index] = { ...cell, span: newSpan };
-                              updatedCells[index + 1] = { ...nextCell, span: newNextSpan };
-
-                              updateComponent(component.id, {
-                                props: {
-                                  ...component.props,
-                                  cells: updatedCells,
-                                },
-                              });
-                            }
-                          };
-
-                          const handleMouseUp = () => {
-                            document.removeEventListener('mousemove', handleMouseMove);
-                            document.removeEventListener('mouseup', handleMouseUp);
-                          };
-
-                          document.addEventListener('mousemove', handleMouseMove);
-                          document.addEventListener('mouseup', handleMouseUp);
-                        }}
-                      />
-                    )}
                   </div>
                 );
               })}
@@ -239,7 +180,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
     }
   };
 
-  // 修改拖拽源配置
   const [{ isDragging }, drag] = useDrag(
     () => ({
       type: 'CANVAS_COMPONENT',
@@ -260,24 +200,24 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   const detectDropPosition = (e: React.DragEvent, componentRect: DOMRect) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-    
+
     // 计算鼠标相对于组件的位置
     const relativeX = mouseX - componentRect.left;
     const relativeY = mouseY - componentRect.top;
-    
+
     // 计算组件的中心点
     const centerX = componentRect.width / 2;
     const centerY = componentRect.height / 2;
-    
+
     // 计算鼠标到中心点的距离
     const distanceX = Math.abs(relativeX - centerX);
     const distanceY = Math.abs(relativeY - centerY);
-    
+
     // 如果鼠标在组件下方且接近底部，设置为 next-line
     if (relativeY > componentRect.height * 0.8) {
       return 'next-line';
     }
-    
+
     // 根据鼠标位置确定放置位置
     if (distanceX > distanceY) {
       // 水平方向
@@ -287,20 +227,20 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       return relativeY < centerY ? 'top' : 'bottom';
     }
   };
-  
+
   // 在 useDrop 钩子中更新 hover 处理函数
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['COMPONENT', 'CANVAS_COMPONENT'],
     hover: (item, monitor) => {
       if (!componentRef.current) return;
-      
+
       const componentRect = componentRef.current.getBoundingClientRect();
       const clientOffset = monitor.getClientOffset();
-      
+
       if (clientOffset) {
         const position = detectDropPosition(
           { clientX: clientOffset.x, clientY: clientOffset.y } as React.DragEvent,
-          componentRect
+          componentRect,
         );
         setDropPosition(position);
       }
@@ -311,37 +251,32 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       }
 
       if (item.id && !item.id.includes('template')) {
-        // 如果是在同一个单元格内的组件
         if (component.props?.cellId && item.cellId === component.props.cellId) {
-          // 如果是放置到下一行
           if (dropPosition === 'next-line') {
-            // 使用 moveComponent 函数将组件移动到下一行
-            moveComponent(item.id, component.parentId, { 
+            moveComponent(item.id, component.parentId, {
               targetId: component.id,
               position: 'next-line',
-              cellId: component.props.cellId
+              cellId: component.props.cellId,
             });
           } else {
-            // 统一处理同一单元格内组件的交换位置逻辑
-            moveComponent(item.id, component.parentId, { 
+            moveComponent(item.id, component.parentId, {
               targetId: component.id,
               position: dropPosition,
               cellId: component.props.cellId,
-              isSwap: true
+              isSwap: true,
             });
           }
         } else if (component.type === ComponentType.GRID) {
-          // 如果是拖到栅格容器上，将组件移动到栅格的单元格中
           const cellId = component.props?.cells?.[0]?.id;
           if (cellId) {
             moveComponent(item.id, component.id, { cellId });
           }
         } else {
           // 如果是拖到其他类型的组件上，根据位置进行交换
-          moveComponent(item.id, component.parentId, { 
+          moveComponent(item.id, component.parentId, {
             targetId: component.id,
             position: dropPosition,
-            isSwap: true
+            isSwap: true,
           });
         }
       } else if (item.type) {
@@ -357,8 +292,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         };
         addComponent(newComponent);
       }
-
-      // 重置放置位置
       setDropPosition(null);
     },
     collect: (monitor) => ({
@@ -366,28 +299,40 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       canDrop: !!monitor?.canDrop(),
     }),
   });
+console.log(component.props.style,'component.props.style')
+  return (
+    <ComponentWrapper
+      ref={(node) => {
+        drag(drop(node));
+        componentRef.current = node;
+      }}
+      onClick={handleClick}
+      isSelected={selectedId === component.id}
+      ispreview={ispreview}
+      isGrid={component.type === ComponentType.GRID}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: ispreview ? 'default' : 'move',
+        position: 'relative',
+        gap: '4px',
+        // ...(component.props.style ? component.props.style : {}),
+      }}
+    >
+      {renderComponent()}
 
-return (
-  <ComponentWrapper
-    ref={(node) => {
-      drag(drop(node));
-      componentRef.current = node;
-    }}
-    onClick={handleClick}
-    isSelected={selectedId === component.id}
-    ispreview={ispreview}
-    isGrid={component.type === ComponentType.GRID}
-    style={{
-      opacity: isDragging ? 0.5 : 1,
-      cursor: ispreview ? 'default' : 'move',
-      position: 'relative',
-      gap:'4px',
-        ...(component.props.style ? component.props.style : {}),
-    }}
-  >
-    {renderComponent()}
-  </ComponentWrapper>
-);
+      {!ispreview && selectedId === component.id && (
+        <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
+          <DeleteOutlined
+            style={{ color: 'red', cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteComponent(component.id);
+            }}
+          />
+        </div>
+      )}
+    </ComponentWrapper>
+  );
 };
 
 export default CanvasComponent;

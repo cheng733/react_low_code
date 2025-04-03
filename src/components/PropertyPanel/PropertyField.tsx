@@ -35,7 +35,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
   if (config.condition && !config.condition(componentProps)) {
     return null;
   }
-
   // 获取当前值，如果没有则使用默认值
   const currentValue = value !== undefined ? value : config.defaultValue;
 
@@ -137,8 +136,8 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             rows={4}
           />
         );
-
-      case PropertyType.MARGIN || PropertyType.PADDING:
+      case PropertyType.PADDING:
+      case PropertyType.MARGIN:
         const type = config.type === PropertyType.MARGIN ? 'margin' : 'padding';
         const directions = ['Top', 'Right', 'Bottom', 'Left'];
         
@@ -148,9 +147,9 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
               <div key={direction} style={{ flex: '1 0 45%' }}>
                 <FieldLabel style={{ fontSize: '12px' }}>{direction}</FieldLabel>
                 <Input
-                  value={get(componentProps, `style.${type}${direction}`)}
+                  value={get(componentProps, `style.${type}${direction}`)??currentValue}
                   onChange={(e) => onChange(`style.${type}${direction}`, e.target.value)}
-                  placeholder="0px"
+                  // placeholder="0px"
                   size="small"
                 />
               </div>

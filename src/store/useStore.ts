@@ -17,10 +17,9 @@ interface EditorState {
   historyIndex: number;
   ispreview: boolean;
   showCodePreview: boolean;
-
-  // Actions
+  contentRef: React.MutableRefObject<HTMLDivElement >| null;
   addComponent: (component: Partial<ComponentInstance>, cellId?: string) => void;
-  removeComponent: (id: string) => void;
+  deleteComponent: (id: string) => void;
   updateComponent: (id: string, props: Partial<ComponentInstance>) => void;
   updateCanvas: (updates: Partial<CanvasState>) => void;
   selectComponent: (id: string | null) => void;
@@ -58,48 +57,20 @@ export const useStore = create<EditorState>()(
       size: CanvasSize.A4,
       ...canvasSizeConfig[CanvasSize.A4],
       scale: 1,
+      padding:'10px'
     },
     history: [],
     historyIndex: -1,
     ispreview: false,
     showCodePreview: false,
-    // 移除组件
-    removeComponent: (id) => {
+    contentRef: null,
+    saveContentRef: (ref) => {
       set((state) => {
-        // 递归移除组件及其子组件
-        const removeComponentById = (
-          components: ComponentInstance[],
-          id: string,
-        ): ComponentInstance[] => {
-          return components.filter((comp) => {
-            if (comp.id === id) return false;
-            if (comp.children) {
-              comp.children = removeComponentById(comp.children, id);
-            }
-            return true;
-          });
-        };
-
-        state.components = removeComponentById(state.components, id);
-
-        // 添加历史记录
-        state.history = state.history.slice(0, state.historyIndex + 1);
-        state.history.push({
-          actionType: HistoryActionType.REMOVE,
-          components: [...state.components],
-          selectedId: null,
-        });
-        state.historyIndex = state.history.length - 1;
-
-        // 取消选中
-        state.selectedId = null;
+        state.contentRef = ref;
       });
     },
-
-    // 更新组件
     updateComponent: (id, props) => {
       set((state) => {
-        // 递归查找并更新组件
         const updateComponentById = (
           components: ComponentInstance[],
           id: string,
@@ -653,7 +624,37 @@ export const useStore = create<EditorState>()(
       get().selectComponent(newComponent.id);
     },
     // 添加删除组件方法
-    deleteComponent: (id: string) => {},
+    deleteComponent: (id) => {
+      set((state) => {
+        // 递归移除组件及其子组件
+        const removeComponentById = (
+          components: ComponentInstance[],
+          id: string,
+        ): ComponentInstance[] => {
+          return components.filter((comp) => {
+            if (comp.id === id) return false;
+            if (comp.children) {
+              comp.children = removeComponentById(comp.children, id);
+            }
+            return true;
+          });
+        };
+    
+        state.components = removeComponentById(state.components, id);
+    
+        // 添加历史记录
+        state.history = state.history.slice(0, state.historyIndex + 1);
+        state.history.push({
+          actionType: HistoryActionType.REMOVE,
+          components: [...state.components],
+          selectedId: null,
+        });
+        state.historyIndex = state.history.length - 1;
+    
+        // 取消选中
+        state.selectedId = null;
+      });
+    },
     // 添加复制组件方法
     duplicateComponent: (id: string) => {},
     updateCanvas: (updates) => {

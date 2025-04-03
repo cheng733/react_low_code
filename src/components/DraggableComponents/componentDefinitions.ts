@@ -15,12 +15,11 @@ export const layoutComponents: ComponentDefinition[] = [
         { id: 'cell-1', span: 24 },
       ],
       style: {
-        // width: '100%',
-        // padding: '12px',
         background: '#fafafa',
         borderRadius: '4px',
         position: 'relative',
         minHeight: '100px',
+        gap:"4px"
       },
     },
     children: [],
@@ -84,7 +83,6 @@ export const generalComponents: ComponentDefinition[] = [
       color: '#000000',
       bgColor: '#ffffff',
       style: {
-        margin: '0 auto',
       },
     },
   },

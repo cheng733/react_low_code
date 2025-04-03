@@ -73,13 +73,9 @@ const PropertyPanel: React.FC = () => {
     return groups;
   }, [propertyConfigs]);
 
-  // 处理属性变更
   const handlePropertyChange = (key: string, value: any) => {
     if (!selectedComponent) {
-      // 如果是画布属性
       const updates = {};
-      
-      // 处理嵌套属性 (如 style.fontSize)
       if (key.includes('.')) {
         const [parent, child] = key.split('.');
         if (!updates[parent]) {
@@ -90,7 +86,6 @@ const PropertyPanel: React.FC = () => {
         updates[key] = value;
       }
       
-      console.log('Updating canvas property:', key, value, updates);
       updateCanvas(updates);
       return;
     }

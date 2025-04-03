@@ -1,20 +1,18 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useStore } from '../../store/useStore';
 import CanvasComponent from './CanvasComponent';
 import { useDrop } from 'react-dnd';
 
-const CanvasWrapper = styled.div<{ scale: number; ispreview: boolean }>`
+const CanvasWrapper = styled.div<{ ispreview: boolean }>`
   position: relative;
   background-color: white;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  transform: ${({ scale }) => `scale(${scale})`};
   transform-origin: top center;
   transition: transform 0.3s;
-  margin: ${({ ispreview }) => (ispreview ? '0' : '20px')} auto;
   overflow: auto;
   cursor: ${({ ispreview }) => (ispreview ? 'default' : 'pointer')};
-    ${({ ispreview }) =>
+  ${({ ispreview }) =>
     ispreview
       ? `
     border: none;
@@ -23,8 +21,9 @@ const CanvasWrapper = styled.div<{ scale: number; ispreview: boolean }>`
 `;
 
 const Canvas: React.FC = () => {
-  const { components, canvas, addComponent, selectComponent, ispreview } = useStore();
-
+  const { components, canvas, addComponent, selectComponent, ispreview, saveContentRef } =
+    useStore();
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [{ isOver }, drop] = useDrop({
     accept: 'COMPONENT',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,8 +45,6 @@ const Canvas: React.FC = () => {
     }
   };
 
-
-
   const canvasStyle = {
     width: canvas.width || '800px',
     height: canvas.height || '1200px',
@@ -57,23 +54,25 @@ const Canvas: React.FC = () => {
     margin: canvas.margin || '0',
   };
 
-
   if (canvas.style) {
     Object.assign(canvasStyle, canvas.style);
   }
-
+  useEffect(() => {
+    saveContentRef(canvasRef);
+  }, []);
   return (
-    <CanvasWrapper
-      ref={drop}
-      style={canvasStyle}
-      scale={canvas.scale || 1}
-      ispreview={ispreview}
-      onClick={handleCanvasClick}
-    >
-      {components.map((component) => (
-        <CanvasComponent key={component.id} component={component} />
-      ))}
-    </CanvasWrapper>
+    <div ref={canvasRef}>
+      <CanvasWrapper
+        ref={drop}
+        style={canvasStyle}
+        ispreview={ispreview}
+        onClick={handleCanvasClick}
+      >
+        {components.map((component) => (
+          <CanvasComponent key={component.id} component={component} />
+        ))}
+      </CanvasWrapper>
+    </div>
   );
 };
 
