@@ -4,9 +4,9 @@ import { useStore } from '../../store/useStore';
 import { ComponentInstance, ComponentType } from '../../types';
 import { Input, Typography, Image, QRCode } from 'antd';
 import styled from 'styled-components';
-import 'react-resizable/css/styles.css';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
 import { set, cloneDeep } from 'lodash';
+
 interface CanvasComponentProps {
   component: ComponentInstance;
 }
@@ -40,8 +40,15 @@ const ComponentWrapper = styled.div<{ isSelected: boolean; ispreview: boolean; i
 `;
 
 const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
-  const { selectComponent, selectedId, addComponent, moveComponent, ispreview,updateComponent, deleteComponent } =
-    useStore();
+  const {
+    selectComponent,
+    selectedId,
+    addComponent,
+    moveComponent,
+    ispreview,
+    updateComponent,
+    deleteComponent,
+  } = useStore();
   const componentRef = useRef<HTMLDivElement>(null);
   const [dropPosition, setDropPosition] = React.useState<
     'top' | 'right' | 'bottom' | 'left' | 'next-line' | null
@@ -60,18 +67,23 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   };
 
   const renderComponent = () => {
-    console.log(component.props,'component.props')
     const props = {
       ...component.props,
       style: {
         ...(component.props.style ? component.props.style : {}),
         pointerEvents: ispreview ? 'none' : 'auto',
-        ...(ispreview ? { border: 'none',backgroundColor:"#fff" } : {}),
+        ...(ispreview ? { border: 'none', backgroundColor: '#fff' } : {}),
       },
     };
     switch (component.type) {
       case ComponentType.INPUT:
-        return <Input {...props} onChange={(e) => handleChange(e.target.value)} {...(ispreview ? { type: 'text' } : {})} />;
+        return (
+          <Input
+            {...props}
+            onChange={(e) => handleChange(e.target.value)}
+            {...(ispreview ? { type: 'text' } : {})}
+          />
+        );
       case ComponentType.TEXT:
         return <Typography.Text {...props}>{props.content}</Typography.Text>;
       case ComponentType.IMAGE:
@@ -89,9 +101,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         );
       case ComponentType.GRID:
         const cells = props.cells;
-        console.log(props.style,'grid')
         return (
-          <div className="grid-container" style={{ ...props.style, width: '100%',height:'100%' }}>
+          <div className="grid-container" style={{ ...props.style, width: '100%', height: '100%' }}>
             <div>
               {cells.map((cell, index) => {
                 const cellChildren =
@@ -122,7 +133,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     isOver: !!monitor.isOver({ shallow: true }),
                   }),
                 });
-
                 return (
                   <div
                     key={cell.id}
@@ -145,7 +155,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     >
                       <div
                         className="cell-content"
-                        style={{ gap: '4px', display: 'flex', flexWrap: 'wrap' }}
+                        // style={{ gap: '4px', display: 'flex', flexWrap: 'wrap' }}
                       >
                         {cellChildren.length > 0 ? (
                           cellChildren.map((child) => (
@@ -299,7 +309,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       canDrop: !!monitor?.canDrop(),
     }),
   });
-console.log(component.props.style,'component.props.style')
+
   return (
     <ComponentWrapper
       ref={(node) => {
@@ -315,7 +325,7 @@ console.log(component.props.style,'component.props.style')
         cursor: ispreview ? 'default' : 'move',
         position: 'relative',
         gap: '4px',
-        // ...(component.props.style ? component.props.style : {}),
+        ...(component.props.style ? component.props.style : {}),
       }}
     >
       {renderComponent()}

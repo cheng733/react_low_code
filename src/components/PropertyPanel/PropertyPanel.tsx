@@ -85,13 +85,12 @@ const PropertyPanel: React.FC = () => {
       } else {
         updates[key] = value;
       }
-      
+
       updateCanvas(updates);
       return;
     }
 
     const updatedProps = cloneDeep(selectedComponent.props || {});
-
     set(updatedProps, key, value);
     updateComponent(selectedComponent.id, { props: updatedProps });
   };

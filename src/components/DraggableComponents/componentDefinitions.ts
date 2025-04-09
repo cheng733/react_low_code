@@ -10,7 +10,6 @@ export const layoutComponents: ComponentDefinition[] = [
     props: {
       columns: 1,
       gutter: [16, 16],
-      resizable: true,
       cells: [
         { id: 'cell-1', span: 24 },
       ],

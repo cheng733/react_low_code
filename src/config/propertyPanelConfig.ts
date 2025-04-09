@@ -16,7 +16,7 @@ export enum PropertyType {
   BORDER = 'border',       // 边框设置
   BACKGROUND = 'background', // 背景设置
   LAYOUT = 'layout',       // 布局设置
-  CUSTOM = 'custom',       // 自定义组件
+  COLUMNS = 'columns',       // 自定义组件
 }
 export interface PropertyConfig {
   key: string;             // 属性键名
@@ -312,22 +312,6 @@ const inputProperties: PropertyConfig[] = [
 ];
 
 const gridProperties: PropertyConfig[] = [
-  // {
-  //   key: 'cells',
-  //   label: '单元格配置',
-  //   type: PropertyType.CUSTOM,
-  //   group: '基础',
-  // },
-  // {
-  //   key: 'gutter',
-  //   label: '单元格间距',
-  //   type: PropertyType.NUMBER,
-  //   defaultValue: 0,
-  //   min: 0,
-  //   max: 48,
-  //   step: 8,
-  //   group: '基础',
-  // },
   ...commonStyleProperties,
 ];
 

@@ -31,23 +31,17 @@ interface PropertyFieldProps {
 }
 
 const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, componentProps }) => {
-  // 如果有条件显示且条件不满足，则不渲染
   if (config.condition && !config.condition(componentProps)) {
     return null;
   }
-  // 获取当前值，如果没有则使用默认值
   const currentValue = value !== undefined ? value : config.defaultValue;
-
-  // 处理值变化
   const handleChange = (newValue: any) => {
-    // 如果有自定义的onChange处理函数，则调用它
     if (config.onChange) {
       newValue = config.onChange(newValue, componentProps);
     }
     onChange(config.key, newValue);
   };
 
-  // 根据属性类型渲染不同的表单控件
   const renderField = () => {
     switch (config.type) {
       case PropertyType.TEXT:
@@ -149,7 +143,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
                 <Input
                   value={get(componentProps, `style.${type}${direction}`)??currentValue}
                   onChange={(e) => onChange(`style.${type}${direction}`, e.target.value)}
-                  // placeholder="0px"
                   size="small"
                 />
               </div>
@@ -186,9 +179,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             />
           </div>
         );
-
-      case PropertyType.CUSTOM:
-        // 栅格单元格配置的特殊处理
         if (config.key === 'cells' && componentProps.cells) {
           return (
             <div>
