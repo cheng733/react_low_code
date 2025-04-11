@@ -61,7 +61,6 @@ const PropertyPanel: React.FC = () => {
   // 按组分组属性
   const groupedProperties = useMemo(() => {
     const groups: Record<string, PropertyConfig[]> = {};
-
     propertyConfigs.forEach((config) => {
       const group = config.group || '基础';
       if (!groups[group]) {

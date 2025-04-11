@@ -151,7 +151,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
         );
 
       case PropertyType.BORDER:
-        // 边框设置组件
         return (
           <div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -179,29 +178,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             />
           </div>
         );
-        if (config.key === 'cells' && componentProps.cells) {
-          return (
-            <div>
-              {componentProps.cells.map((cell, index) => (
-                <div key={cell.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ marginRight: '8px' }}>单元格 {index + 1}:</span>
-                  <InputNumber
-                    value={cell.span}
-                    min={1}
-                    max={24}
-                    onChange={(value) => {
-                      const newCells = [...componentProps.cells];
-                      newCells[index] = { ...cell, span: value };
-                      onChange('cells', newCells);
-                    }}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              ))}
-            </div>
-          );
-        }
-        return null;
 
       default:
         return <div>不支持的属性类型: {config.type}</div>;

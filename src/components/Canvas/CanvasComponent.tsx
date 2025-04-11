@@ -155,7 +155,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
                     >
                       <div
                         className="cell-content"
-                        // style={{ gap: '4px', display: 'flex', flexWrap: 'wrap' }}
                       >
                         {cellChildren.length > 0 ? (
                           cellChildren.map((child) => (

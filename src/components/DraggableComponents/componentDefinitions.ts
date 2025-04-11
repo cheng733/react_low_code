@@ -28,19 +28,6 @@ export const layoutComponents: ComponentDefinition[] = [
 // 常规组件定义
 export const generalComponents: ComponentDefinition[] = [
   {
-    id: 'input-template',
-    type: ComponentType.INPUT,
-    category: ComponentCategory.GENERAL,
-    name: '输入框',
-    icon: 'FormOutlined',
-    props: {
-      placeholder: '请输入',
-      style: {
-        width: '200px',
-      },
-    },
-  },
-  {
     id: 'text-template',
     type: ComponentType.TEXT,
     category: ComponentCategory.GENERAL,
@@ -51,6 +38,19 @@ export const generalComponents: ComponentDefinition[] = [
       style: {
         fontSize: '14px',
         color: '#000000',
+      },
+    },
+  },
+  {
+    id: 'input-template',
+    type: ComponentType.INPUT,
+    category: ComponentCategory.GENERAL,
+    name: '输入框',
+    icon: 'FormOutlined',
+    props: {
+      placeholder: '请输入',
+      style: {
+        width: '200px',
       },
     },
   },
