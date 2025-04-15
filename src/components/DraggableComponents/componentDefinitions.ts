@@ -88,8 +88,7 @@ export const generalComponents: ComponentDefinition[] = [
       color: '#000000',
       bgColor: '#ffffff',
       style: {
-        display: 'block',
-        margin: '0 auto',
+        display: 'inline-block',
         padding: '10px',
         maxWidth: '100%',
       },

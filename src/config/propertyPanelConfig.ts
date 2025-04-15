@@ -266,7 +266,22 @@ const qrcodeProperties: PropertyConfig[] = [
     type: PropertyType.NUMBER,
     placeholder: '请输入二维码大小',
     group: '基础',
-  }
+  },
+  {
+    key: 'style.display',
+    label: '显示方式',
+    type: PropertyType.SELECT,
+    options: [
+      { label: '块级', value: 'block' },
+      { label: '行内块', value: 'inline-block' },
+      { label: '行内', value: 'inline' },
+      { label: '弹性布局', value: 'flex' },
+      { label: '网格布局', value: 'grid' },
+      { label: '不显示', value: 'none' },
+    ],
+    group: '布局',
+    defaultValue: 'inline-block',
+  },
 ]
 export const componentPropertyConfigs: ComponentPropertyConfig[] = [
   {

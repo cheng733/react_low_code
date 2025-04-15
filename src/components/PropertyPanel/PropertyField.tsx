@@ -264,7 +264,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
               size="small"
               bordered
             >
-              <Table.Column title="列" dataIndex="column" />
+              <Table.Column title="列" dataIndex="column" width={50}/>
               <Table.Column
                 title="宽度 (%)"
                 dataIndex="width"
