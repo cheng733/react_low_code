@@ -74,7 +74,7 @@ const PropertyPanel: React.FC = () => {
 
   const handlePropertyChange = (key: string, value: any) => {
     if (!selectedComponent) {
-      const updates = {};
+      const updates: Record<string, any> = {};
       if (key.includes('.')) {
         const [parent, child] = key.split('.');
         if (!updates[parent]) {

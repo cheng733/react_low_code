@@ -17,6 +17,7 @@ export enum PropertyType {
   BACKGROUND = 'background', // 背景设置
   LAYOUT = 'layout',       // 布局设置
   COLUMNS = 'columns',       // 自定义组件
+  COLUMN_WIDTH = 'column_width', // 列宽设置
 }
 export interface PropertyConfig {
   key: string;             // 属性键名
@@ -50,6 +51,7 @@ const commonStyleProperties: PropertyConfig[] = [
     options: [
       { label: '块级', value: 'block' },
       { label: '行内块', value: 'inline-block' },
+      { label: '行内', value: 'inline' },
       { label: '弹性布局', value: 'flex' },
       { label: '网格布局', value: 'grid' },
       { label: '不显示', value: 'none' },
@@ -181,6 +183,48 @@ const inputProperties: PropertyConfig[] = [
 ];
 
 const gridProperties: PropertyConfig[] = [
+  {
+    key: 'columns',
+    label: '列数',
+    type: PropertyType.NUMBER,
+    defaultValue: 2,
+    min: 1,
+    max: 4,
+    step: 1,
+    group: '布局',
+    description: '设置容器数量(1-4)，例如设置为2则创建2个小容器',
+  },
+  {
+    key: 'cells',
+    label: '列宽设置',
+    type: PropertyType.COLUMN_WIDTH,
+    group: '布局',
+    description: '可以调整各个列的宽度百分比',
+  },
+  {
+    key: 'style.minHeight',
+    label: '最小高度',
+    type: PropertyType.TEXT,
+    placeholder: '例如：200px',
+    defaultValue: '200px',
+    group: '布局',
+  },
+  {
+    key: 'style.borderRadius',
+    label: '圆角',
+    type: PropertyType.TEXT,
+    placeholder: '例如：4px',
+    defaultValue: '4px',
+    group: '外观',
+  },
+  {
+    key: 'style.boxShadow',
+    label: '阴影',
+    type: PropertyType.TEXT,
+    placeholder: '例如：0 2px 8px rgba(0,0,0,0.1)',
+    defaultValue: '0 2px 8px rgba(0,0,0,0.08)',
+    group: '外观',
+  },
   ...commonStyleProperties,
 ];
 

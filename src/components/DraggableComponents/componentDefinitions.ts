@@ -8,17 +8,19 @@ export const layoutComponents: ComponentDefinition[] = [
     name: '栅格容器',
     icon: 'BorderOuterOutlined',
     props: {
-      columns: 1,
-      gutter: [16, 16],
+      columns: 2,
       cells: [
-        { id: 'cell-1', span: 24 },
+        { id: 'cell-1', span: 1, width: 50 },
+        { id: 'cell-2', span: 1, width: 50 },
       ],
       style: {
         background: '#fafafa',
         borderRadius: '4px',
+        padding: '0',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
         position: 'relative',
-        minHeight: '100px',
-        gap:"4px"
+        minHeight: '200px',
+        width: '100%'
       },
     },
     children: [],
@@ -38,6 +40,8 @@ export const generalComponents: ComponentDefinition[] = [
       style: {
         fontSize: '14px',
         color: '#000000',
+        display: 'block',
+        width: '100%',
       },
     },
   },
@@ -50,7 +54,8 @@ export const generalComponents: ComponentDefinition[] = [
     props: {
       placeholder: '请输入',
       style: {
-        width: '200px',
+        width: '100%',
+        display: 'block',
       },
     },
   },
@@ -66,6 +71,7 @@ export const generalComponents: ComponentDefinition[] = [
       style: {
         width: '100%',
         maxWidth: '300px',
+        display: 'block',
       },
     },
   },
@@ -82,6 +88,10 @@ export const generalComponents: ComponentDefinition[] = [
       color: '#000000',
       bgColor: '#ffffff',
       style: {
+        display: 'block',
+        margin: '0 auto',
+        padding: '10px',
+        maxWidth: '100%',
       },
     },
   },

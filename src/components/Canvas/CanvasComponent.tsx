@@ -1,11 +1,94 @@
-import React, { useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import React, { useRef, useCallback, memo } from 'react';
+import { useDrag, useDrop, DropTargetMonitor } from 'react-dnd';
 import { useStore } from '../../store/useStore';
 import { ComponentInstance, ComponentType } from '../../types';
-import { Input, Typography, Image, QRCode } from 'antd';
-import styled from 'styled-components';
+import { Input, Typography, Image, QRCode, Slider } from 'antd';
+import styled, { createGlobalStyle } from 'styled-components';
 import { DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
 import { set, cloneDeep } from 'lodash';
+
+// 添加全局样式以修复组件显示模式问题
+const GlobalStyles = createGlobalStyle`
+  .component-TEXT[style*="display: inline"] { display: inline !important; }
+  .component-TEXT[style*="display: inline-block"] { display: inline-block !important; }
+  .component-TEXT[style*="display: block"] { display: block !important; }
+  .component-TEXT[style*="display: flex"] { display: flex !important; }
+  .component-TEXT[style*="display: none"] { display: none !important; }
+  
+  .component-INPUT[style*="display: inline"] { display: inline !important; }
+  .component-INPUT[style*="display: inline-block"] { display: inline-block !important; }
+  .component-INPUT[style*="display: block"] { display: block !important; }
+  .component-INPUT[style*="display: flex"] { display: flex !important; }
+  .component-INPUT[style*="display: none"] { display: none !important; }
+  
+  .component-IMAGE[style*="display: inline"] { display: inline !important; }
+  .component-IMAGE[style*="display: inline-block"] { display: inline-block !important; }
+  .component-IMAGE[style*="display: block"] { display: block !important; }
+  .component-IMAGE[style*="display: flex"] { display: flex !important; }
+  .component-IMAGE[style*="display: none"] { display: none !important; }
+  
+  .component-QRCODE[style*="display: inline"] { display: inline !important; }
+  .component-QRCODE[style*="display: inline-block"] { display: inline-block !important; }
+  .component-QRCODE[style*="display: block"] { display: block !important; }
+  .component-QRCODE[style*="display: flex"] { display: flex !important; }
+  .component-QRCODE[style*="display: none"] { display: none !important; }
+`;
+
+// Define interfaces for grid component
+interface GridCell {
+  id: string;
+  span?: number;
+  width?: number;
+  [key: string]: any;
+}
+
+interface GridProps {
+  cells?: GridCell[];
+  columns?: number;
+  gutter?: number | [number, number];
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+// Define interfaces for other component types
+interface TextProps {
+  content?: string;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+interface InputProps {
+  placeholder?: string;
+  value?: string;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+interface ImageProps {
+  src?: string;
+  alt?: string;
+  preview?: boolean;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+interface QRCodeProps {
+  value?: string;
+  size?: number;
+  icon?: string;
+  color?: string;
+  bgColor?: string;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+// Define DragItem interface for drag and drop
+interface DragItem {
+  id: string;
+  type: ComponentType;
+  cellId?: string;
+  props?: Record<string, any>;
+}
 
 interface CanvasComponentProps {
   component: ComponentInstance;
@@ -13,8 +96,10 @@ interface CanvasComponentProps {
 
 const ComponentWrapper = styled.div<{ isSelected: boolean; ispreview: boolean; isGrid?: boolean }>`
   position: relative;
-  display: ${({ isGrid }) => (isGrid ? 'block' : 'inline-block')};
+  display: ${({ isGrid }) => (isGrid ? 'block' : 'auto')};
   width: ${({ isGrid }) => (isGrid ? '100%' : 'auto')};
+  max-width: 100%;
+  overflow: visible;
   ${({ ispreview }) =>
     ispreview
       ? `
@@ -49,7 +134,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
     updateComponent,
     deleteComponent,
   } = useStore();
-  const componentRef = useRef<HTMLDivElement>(null);
+  const [node, setNode] = React.useState<HTMLDivElement | null>(null);
   const [dropPosition, setDropPosition] = React.useState<
     'top' | 'right' | 'bottom' | 'left' | 'next-line' | null
   >(null);
@@ -71,117 +156,156 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       ...component.props,
       style: {
         ...(component.props.style ? component.props.style : {}),
-        pointerEvents: ispreview ? 'none' : 'auto',
+        pointerEvents: ispreview ? 'none' as const : 'auto' as const,
         ...(ispreview ? { border: 'none', backgroundColor: '#fff' } : {}),
       },
     };
+    
     switch (component.type) {
       case ComponentType.INPUT:
+        const inputProps = props as unknown as InputProps;
+        // 确保输入框组件有正确的display设置
+        const inputStyle: React.CSSProperties = {
+          ...inputProps.style,
+          display: inputProps.style?.display || 'block',
+          width: inputProps.style?.width || '100%'
+        };
         return (
           <Input
-            {...props}
+            {...inputProps}
+            style={inputStyle}
             onChange={(e) => handleChange(e.target.value)}
             {...(ispreview ? { type: 'text' } : {})}
           />
         );
       case ComponentType.TEXT:
-        return <Typography.Text {...props}>{props.content}</Typography.Text>;
+        const textProps = props as unknown as TextProps;
+        // 确保文本组件有正确的display设置
+        const textStyle: React.CSSProperties = {
+          ...textProps.style,
+          display: textProps.style?.display || 'block'
+        };
+        
+        // 从textProps中提取style之外的其他属性
+        const { style, content, ...otherTextProps } = textProps;
+        
+        return <Typography.Text style={textStyle} {...otherTextProps}>{content}</Typography.Text>;
       case ComponentType.IMAGE:
-        return <Image {...props} />;
+        const imageProps = props as unknown as ImageProps;
+        // 确保图片组件有正确的display设置
+        const imageStyle: React.CSSProperties = {
+          ...imageProps.style,
+          display: imageProps.style?.display || 'block',
+          maxWidth: '100%'
+        };
+        return <Image {...imageProps} style={imageStyle} />;
       case ComponentType.QRCODE:
+        const qrcodeProps = props as unknown as QRCodeProps;
+        // 确保QRCode组件样式正确
+        const qrcodeStyle: React.CSSProperties = {
+          ...qrcodeProps.style,
+          display: qrcodeProps.style?.display || 'block',
+          maxWidth: '100%',
+          padding: '5px',
+          boxSizing: 'border-box',
+          overflow: 'visible'
+        };
+        
         return (
           <QRCode
-            value={props.value || 'https://baidu.com'}
-            size={props.size || 128}
-            icon={props.icon}
-            color={props.color}
-            bgColor={props.bgColor}
-            style={props.style}
+            value={qrcodeProps.value || 'https://baidu.com'}
+            size={qrcodeProps.size || 128}
+            icon={qrcodeProps.icon}
+            color={qrcodeProps.color}
+            bgColor={qrcodeProps.bgColor}
+            style={qrcodeStyle}
           />
         );
       case ComponentType.GRID:
-        const cells = props.cells;
+        const gridProps = props as unknown as GridProps;
+        const columns = gridProps.columns || 1;
+        
+        // 创建或获取单元格
+        const existingCells = gridProps.cells || [];
+        let cells: GridCell[] = [];
+        
+        // 确保单元格数量与列数一致
+        if (existingCells.length === columns) {
+          // 单元格数量正确，直接使用
+          cells = existingCells;
+        } else {
+          // 单元格数量不对，需要调整
+          // 创建新的单元格数组
+          for (let i = 0; i < columns; i++) {
+            const cellId = `cell-${i+1}`;
+            // 尝试复用已有单元格
+            const existingCell = existingCells.find(c => c.id === cellId);
+            if (existingCell) {
+              cells.push(existingCell);
+            } else {
+              // 为每个单元格设置默认宽度 - 平分
+              const equalWidth = 100 / columns;
+              cells.push({ id: cellId, span: 1, width: equalWidth });
+            }
+          }
+          
+          // 异步更新组件属性，避免渲染过程中修改状态
+          setTimeout(() => {
+            updateComponent(component.id, {
+              props: {
+                ...gridProps,
+                cells
+              }
+            });
+          }, 0);
+        }
+        
         return (
-          <div className="grid-container" style={{ ...props.style, width: '100%', height: '100%' }}>
-            <div>
-              {cells.map((cell, index) => {
-                const cellChildren =
-                  component.children?.filter((child) => child.props?.cellId === cell.id) || [];
-
-                const [{ isOver }, dropRef] = useDrop({
-                  accept: ['COMPONENT', 'CANVAS_COMPONENT'],
-                  drop: (item: any, monitor) => {
-                    if (monitor.didDrop()) {
-                      return;
-                    }
-                    if (item.id && !item.id.includes('template')) {
-                      moveComponent(item.id, component.id, { cellId: cell.id });
-                    } else {
-                      const newComponent = {
-                        ...item,
-                        id: undefined,
-                        parentId: component.id,
-                        props: {
-                          ...(item.props || {}),
-                          cellId: cell.id,
-                        },
-                      };
-                      addComponent(newComponent);
-                    }
-                  },
-                  collect: (monitor) => ({
-                    isOver: !!monitor.isOver({ shallow: true }),
-                  }),
-                });
-                return (
-                  <div
-                    key={cell.id}
-                    className="grid-cell"
-                    style={{
-                      position: 'relative',
-                      minHeight: '100px',
-                      border: ispreview ? '' : isOver ? '1px solid #1890ff' : '1px dashed #e8e8e8',
-                      transition: 'all 0.3s',
-                    }}
-                  >
-                    <div
-                      ref={dropRef}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: '100px',
-                        position: 'relative',
-                      }}
-                    >
-                      <div
-                        className="cell-content"
-                      >
-                        {cellChildren.length > 0 ? (
-                          cellChildren.map((child) => (
-                            <CanvasComponent key={child.id} component={child} />
-                          ))
-                        ) : (
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              width: '100%',
-                              height: '100%',
-                              minHeight: '100px',
-                              color: '#999',
-                              fontSize: '12px',
-                            }}
-                          >
-                            {isOver ? '放置组件到这里' : '拖拽组件到这里'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div 
+            className="grid-container" 
+            style={{ 
+              ...gridProps.style,
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              gap: '0',
+              minHeight: gridProps.style?.minHeight || '200px',
+              boxSizing: 'border-box',
+              position: 'relative',
+              padding: '0',
+              margin: 0,
+              borderRadius: gridProps.style?.borderRadius || '4px',
+              boxShadow: gridProps.style?.boxShadow || (ispreview ? '' : '0 2px 8px rgba(0,0,0,0.08)'),
+              backgroundColor: gridProps.style?.backgroundColor || '#fafafa',
+              alignItems: 'stretch',
+              justifyContent: 'space-between',
+              overflow: 'visible'
+            }}
+          >
+            {cells.slice(0, columns).map((cell, index) => {
+              const cellChildren =
+                component.children?.filter((child) => child.props?.cellId === cell.id) || [];
+              
+              // 获取单元格宽度比例 - 确保平分
+              const cellWidth = `${cell.width || (100 / columns)}%`;
+              
+              return (
+                <GridCell
+                  key={cell.id}
+                  cell={cell}
+                  cellWidth={cellWidth}
+                  component={component}
+                  ispreview={ispreview}
+                  cellChildren={cellChildren}
+                  addComponent={addComponent}
+                  moveComponent={moveComponent}
+                  updateComponent={updateComponent}
+                  index={index}
+                  totalColumns={columns}
+                />
+              );
+            })}
           </div>
         );
       default:
@@ -238,12 +362,12 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   };
 
   // 在 useDrop 钩子中更新 hover 处理函数
-  const [{ isOver, canDrop }, drop] = useDrop({
+  const [collect, drop] = useDrop<DragItem, unknown, { isOver: boolean; canDrop: boolean }>({
     accept: ['COMPONENT', 'CANVAS_COMPONENT'],
     hover: (item, monitor) => {
-      if (!componentRef.current) return;
+      if (!node) return;
 
-      const componentRect = componentRef.current.getBoundingClientRect();
+      const componentRect = node.getBoundingClientRect();
       const clientOffset = monitor.getClientOffset();
 
       if (clientOffset) {
@@ -254,7 +378,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         setDropPosition(position);
       }
     },
-    drop: (item: { id: string; type: ComponentType; cellId?: string }, monitor) => {
+    drop: (item: DragItem, monitor) => {
       if (monitor.didDrop() || item.id === component.id) {
         return;
       }
@@ -265,18 +389,19 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             moveComponent(item.id, component.parentId, {
               targetId: component.id,
               position: 'next-line',
-              cellId: component.props.cellId,
+              cellId: component.props.cellId as string,
             });
           } else {
             moveComponent(item.id, component.parentId, {
               targetId: component.id,
-              position: dropPosition,
-              cellId: component.props.cellId,
+              position: dropPosition || undefined,
+              cellId: component.props.cellId as string,
               isSwap: true,
             });
           }
         } else if (component.type === ComponentType.GRID) {
-          const cellId = component.props?.cells?.[0]?.id;
+          const gridProps = component.props as unknown as GridProps;
+          const cellId = gridProps.cells?.[0]?.id;
           if (cellId) {
             moveComponent(item.id, component.id, { cellId });
           }
@@ -284,7 +409,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
           // 如果是拖到其他类型的组件上，根据位置进行交换
           moveComponent(item.id, component.parentId, {
             targetId: component.id,
-            position: dropPosition,
+            position: dropPosition || undefined,
             isSwap: true,
           });
         }
@@ -304,44 +429,188 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       setDropPosition(null);
     },
     collect: (monitor) => ({
-      isOver: !!monitor?.isOver({ shallow: true }),
-      canDrop: !!monitor?.canDrop(),
+      isOver: !!monitor.isOver({ shallow: true }),
+      canDrop: !!monitor.canDrop(),
+    }),
+  });
+
+  // Combine the drag and drop refs
+  const refCallback = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      // Apply both drag and drop refs to the element
+      const dragElement = drag(element);
+      drop(dragElement);
+      // Update our node state
+      setNode(element);
+    },
+    [drag, drop]
+  );
+
+  return (
+    <>
+      <GlobalStyles />
+      <ComponentWrapper
+        ref={refCallback}
+        onClick={handleClick}
+        isSelected={selectedId === component.id}
+        ispreview={ispreview}
+        isGrid={component.type === ComponentType.GRID}
+        style={{
+          opacity: isDragging ? 0.5 : 1,
+          cursor: ispreview ? 'default' : 'move',
+          position: 'relative',
+          gap: '4px',
+          overflow: 'visible', 
+          // 确保组件自定义样式应用在所有内置样式之后
+          ...(component.props.style as React.CSSProperties || {}),
+        }}
+        className={`component-${component.type}`}
+        data-component-type={component.type}
+      >
+        {renderComponent()}
+
+        {!ispreview && selectedId === component.id && (
+          <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
+            <DeleteOutlined
+              style={{ color: 'red', cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteComponent(component.id);
+              }}
+            />
+          </div>
+        )}
+      </ComponentWrapper>
+    </>
+  );
+};
+
+// 添加到合适的位置
+// 单元格容器组件
+const GridCell = memo(({ 
+  cell, 
+  cellWidth, 
+  component, 
+  ispreview, 
+  cellChildren, 
+  addComponent, 
+  moveComponent,
+  updateComponent,
+  index,
+  totalColumns
+}: {
+  cell: GridCell;
+  cellWidth: string;
+  component: ComponentInstance;
+  ispreview: boolean;
+  cellChildren: ComponentInstance[];
+  addComponent: (component: any) => void;
+  moveComponent: (id: string, parentId: string, options: any) => void;
+  updateComponent: (id: string, patch: any) => void;
+  index: number;
+  totalColumns: number;
+}) => {
+  const [{ isOver }, drop] = useDrop<DragItem, unknown, { isOver: boolean }>({
+    accept: ['COMPONENT', 'CANVAS_COMPONENT'],
+    drop: (item: DragItem, monitor) => {
+      if (monitor.didDrop()) {
+        return;
+      }
+      
+      if (item.id && !item.id.includes('template')) {
+        // 移动已有组件到单元格
+        moveComponent(item.id, component.id, { cellId: cell.id });
+      } else {
+        // 添加新组件到单元格
+        const newComponent = {
+          ...item,
+          id: undefined,
+          parentId: component.id,
+          props: {
+            ...(item.props || {}),
+            cellId: cell.id,
+          },
+        };
+        addComponent(newComponent);
+      }
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver({ shallow: true }),
     }),
   });
 
   return (
-    <ComponentWrapper
-      ref={(node) => {
-        drag(drop(node));
-        componentRef.current = node;
-      }}
-      onClick={handleClick}
-      isSelected={selectedId === component.id}
-      ispreview={ispreview}
-      isGrid={component.type === ComponentType.GRID}
+    <div
+      key={cell.id}
+      className="grid-cell"
       style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: ispreview ? 'default' : 'move',
         position: 'relative',
-        gap: '4px',
-        ...(component.props.style ? component.props.style : {}),
+        flex: `0 0 ${cellWidth}`,
+        width: cellWidth,
+        minHeight: '100%',
+        height: '100%',
+        padding: '8px',
+        backgroundColor: ispreview ? 'transparent' : 'rgba(255, 255, 255, 0.8)',
+        border: ispreview ? 'none' : '1px dashed #e8e8e8',
+        borderRadius: '4px',
+        boxShadow: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        boxSizing: 'border-box',
+        overflow: 'visible',
       }}
     >
-      {renderComponent()}
-
-      {!ispreview && selectedId === component.id && (
-        <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
-          <DeleteOutlined
-            style={{ color: 'red', cursor: 'pointer' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteComponent(component.id);
-            }}
-          />
+      <div
+        ref={drop}
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '100%',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'visible',
+        }}
+      >
+        <div 
+          className="cell-content"
+          style={{
+            height: '100%',
+            width: '100%',
+            // display: 'flex',
+            // flexDirection: 'column',
+            // gap: '6px',
+            overflow: 'visible',
+          }}
+        >
+          {cellChildren.length > 0 ? (
+            cellChildren.map((child) => (
+              <CanvasComponent key={child.id} component={child} />
+            ))
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                height: '100%',
+                minHeight: '180px',
+                color: '#bbb',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                backgroundColor: ispreview ? 'transparent' : isOver ? 'rgba(240, 242, 245, 0.4)' : 'rgba(248, 249, 250, 0.6)',
+                borderRadius: '2px',
+                border: ispreview ? 'none' : isOver ? '1px dashed #1890ff' : '1px dashed #e8e8e8'
+              }}
+            >
+              {isOver ? '放置组件到这里' : '拖拽组件到这里'}
+            </div>
+          )}
         </div>
-      )}
-    </ComponentWrapper>
+      </div>
+    </div>
   );
-};
+});
 
 export default CanvasComponent;
