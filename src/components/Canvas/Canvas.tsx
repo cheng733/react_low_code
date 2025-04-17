@@ -61,7 +61,7 @@ const Canvas: React.FC = () => {
     saveContentRef(canvasRef);
   }, []);
   return (
-    <div ref={canvasRef}>
+    <div ref={canvasRef} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
       <CanvasWrapper
         ref={drop}
         style={canvasStyle}

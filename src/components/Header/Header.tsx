@@ -11,7 +11,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { CanvasSize } from '../../types';
 import styled from 'styled-components';
-import {useReactToPrint} from 'react-to-print';
+import { useReactToPrint } from 'react-to-print';
+import FormPreview from '../FormPreview/FormPreview';
 
 const HeaderContainer = styled.div`
   padding: 8px 16px;
@@ -36,16 +37,14 @@ const Header: React.FC = () => {
   const {
     canvas,
     setCanvasSize,
-    togglePreview,
     undo,
     redo,
     exportToJSON,
-    ispreview,
     contentRef
   } = useStore();
-  
+
   const [codePreviewVisible, setCodePreviewVisible] = useState(false);
-  
+  const [isPreview, setIspreview] = useState(false)
   const reactToPrintFn = useReactToPrint({ contentRef });
   const handlePrint = () => {
     reactToPrintFn()
@@ -57,36 +56,34 @@ const Header: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'layout.json';
+    a.download = 'low_code.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  
-  // 处理代码预览
+
   const handleCodePreview = () => {
     setCodePreviewVisible(true);
   };
 
-  // 生成React代码
   const generateReactCode = () => {
     const json = JSON.parse(exportToJSON());
-    
+
     // 简单的代码生成逻辑
     let code = `import React from 'react';\n`;
     code += `import { Input, Typography, Image, QRCode } from 'antd';\n\n`;
     code += `const GeneratedComponent = () => {\n`;
     code += `  return (\n`;
     code += `    <div style={{ width: '${json.canvas.width}px', height: '${json.canvas.height}px', padding: '${json.canvas.padding || '0px'}' }}>\n`;
-    
+
     // 递归生成组件代码
     const generateComponentCode = (components, indent = 6) => {
       let componentCode = '';
       components.forEach(comp => {
         const indentStr = ' '.repeat(indent);
         const style = comp.props?.style ? JSON.stringify(comp.props.style) : '{}';
-        
+
         switch (comp.type) {
           case 'text':
             componentCode += `${indentStr}<Typography.Text style={${style}}>${comp.props?.content || ''}</Typography.Text>\n`;
@@ -103,30 +100,30 @@ const Header: React.FC = () => {
           case 'grid':
             const cells = comp.props?.cells || [];
             componentCode += `${indentStr}<div style={${style}} className="grid-container">\n`;
-            
+
             // 处理网格单元格
             if (cells.length > 0) {
               componentCode += `${indentStr}  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '${(comp.props?.gutter?.[0] || 16)}px' }}>\n`;
-              
+
               cells.forEach(cell => {
                 const cellWidth = (cell.span / 24) * 100;
                 componentCode += `${indentStr}    <div style={{ width: '${cellWidth}%', marginBottom: '${(comp.props?.gutter?.[1] || 16)}px' }}>\n`;
-                
+
                 // 查找属于该单元格的子组件
                 const cellChildren = comp.children?.filter(child => child.props?.cellId === cell.id) || [];
                 if (cellChildren.length > 0) {
                   componentCode += generateComponentCode(cellChildren, indent + 6);
                 }
-                
+
                 componentCode += `${indentStr}    </div>\n`;
               });
-              
+
               componentCode += `${indentStr}  </div>\n`;
             } else if (comp.children && comp.children.length > 0) {
               // 如果没有单元格但有子组件
               componentCode += generateComponentCode(comp.children, indent + 2);
             }
-            
+
             componentCode += `${indentStr}</div>\n`;
             break;
           default:
@@ -135,16 +132,19 @@ const Header: React.FC = () => {
       });
       return componentCode;
     };
-    
+
     code += generateComponentCode(json.components);
     code += `    </div>\n`;
     code += `  );\n`;
     code += `};\n\n`;
     code += `export default GeneratedComponent;`;
-    
+
     return code;
   };
 
+  const handlePreview = () => {
+    setIspreview(!isPreview);
+  }
   return (
     <HeaderContainer>
       <Space>
@@ -167,9 +167,9 @@ const Header: React.FC = () => {
       <Space>
         <Tooltip title="预览">
           <Button
-            type={ispreview ? 'primary' : 'default'}
+            type={isPreview ? 'primary' : 'default'}
             icon={<EyeOutlined />}
-            onClick={togglePreview}
+            onClick={handlePreview}
           />
         </Tooltip>
         <Tooltip title="打印">
@@ -182,8 +182,8 @@ const Header: React.FC = () => {
           <Button icon={<CodeOutlined />} onClick={handleCodePreview} />
         </Tooltip>
       </Space>
-      
-      {/* 代码预览弹窗 */}
+
+
       <Modal
         title="代码预览"
         open={codePreviewVisible}
@@ -207,6 +207,17 @@ const Header: React.FC = () => {
           ]}
         />
       </Modal>
+
+      <Modal
+        title="UI预览"
+        open={isPreview}
+        onCancel={() => handlePreview()}
+        width={842}
+        footer={null}
+      >
+        <FormPreview json={JSON.parse(exportToJSON())} />
+      </Modal>
+
     </HeaderContainer>
   );
 };

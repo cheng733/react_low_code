@@ -48,7 +48,7 @@ export interface CanvasState {
   size: CanvasSize;
   width: number;
   height: number;
-  scale: number;
+  padding:string;
   backgroundColor: string;
   style:CSSStyleRule;
 }

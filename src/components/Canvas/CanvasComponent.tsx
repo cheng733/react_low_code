@@ -549,7 +549,7 @@ const GridCell = memo(({
         width: cellWidth,
         minHeight: '100%',
         height: '100%',
-        padding: '8px',
+        // padding: '8px',
         backgroundColor: ispreview ? 'transparent' : 'rgba(255, 255, 255, 0.8)',
         border: ispreview ? 'none' : '1px dashed #e8e8e8',
         borderRadius: '4px',

@@ -56,7 +56,6 @@ export const useStore = create<EditorState>()(
     canvas: {
       size: CanvasSize.A4,
       ...canvasSizeConfig[CanvasSize.A4],
-      scale: 1,
       padding:'10px'
     },
     history: [],

@@ -43,6 +43,17 @@ export interface ComponentPropertyConfig {
   properties: PropertyConfig[]; 
 }
 
+const commonProperties: PropertyConfig[] = [
+  {
+    key: 'formId',
+    label: '表单ID',
+    type: PropertyType.TEXT,
+    placeholder: '请输入表单字段ID',
+    description: '用于表单数据绑定的唯一标识',
+    group: '基础',
+  },
+];
+
 const commonStyleProperties: PropertyConfig[] = [
   {
     key: 'style.display',
@@ -56,6 +67,12 @@ const commonStyleProperties: PropertyConfig[] = [
       { label: '网格布局', value: 'grid' },
       { label: '不显示', value: 'none' },
     ],
+    group: '布局',
+  },
+  {
+    key: 'style.width',
+    label: '宽度',
+    type: PropertyType.TEXT,
     group: '布局',
   },
   {
@@ -148,6 +165,7 @@ const textProperties: PropertyConfig[] = [
     placeholder: '请输入文本内容',
     group: '基础',
   },
+  ...commonProperties,
   ...commonStyleProperties,
 ];
 
@@ -179,6 +197,7 @@ const inputProperties: PropertyConfig[] = [
     defaultValue: false,
     group: '功能',
   },
+  ...commonProperties,
   ...commonStyleProperties,
 ];
 
@@ -250,8 +269,10 @@ const imageProperties: PropertyConfig[] = [
     defaultValue: true,
     group: '功能',
   },
+  ...commonProperties,
   ...commonStyleProperties,
 ];
+
 const qrcodeProperties: PropertyConfig[] = [
   {
     key:'value',
@@ -267,6 +288,7 @@ const qrcodeProperties: PropertyConfig[] = [
     placeholder: '请输入二维码大小',
     group: '基础',
   },
+  ...commonProperties,
   {
     key: 'style.display',
     label: '显示方式',
