@@ -21,9 +21,8 @@ const CanvasWrapper = styled.div<{ ispreview: boolean }>`
 `;
 
 const Canvas: React.FC = () => {
-  const { components, canvas, addComponent, selectComponent, ispreview, saveContentRef } =
+  const { components, canvas, addComponent, selectComponent, ispreview } =
     useStore();
-  const canvasRef = useRef<HTMLDivElement>(null);
   const [{ isOver }, drop] = useDrop({
     accept: 'COMPONENT',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,11 +56,8 @@ const Canvas: React.FC = () => {
   if (canvas.style) {
     Object.assign(canvasStyle, canvas.style);
   }
-  useEffect(() => {
-    saveContentRef(canvasRef);
-  }, []);
+
   return (
-    <div ref={canvasRef} style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
       <CanvasWrapper
         ref={drop}
         style={canvasStyle}
@@ -72,7 +68,6 @@ const Canvas: React.FC = () => {
           <CanvasComponent key={component.id} component={component} />
         ))}
       </CanvasWrapper>
-    </div>
   );
 };
 

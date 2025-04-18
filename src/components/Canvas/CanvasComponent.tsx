@@ -138,7 +138,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   const [dropPosition, setDropPosition] = React.useState<
     'top' | 'right' | 'bottom' | 'left' | 'next-line' | null
   >(null);
-
+  const isSelected = selectedId == component.id
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!ispreview) {
@@ -160,7 +160,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         ...(ispreview ? { border: 'none', backgroundColor: '#fff' } : {}),
       },
     };
-    
+
     switch (component.type) {
       case ComponentType.INPUT:
         const inputProps = props as unknown as InputProps;
@@ -185,10 +185,10 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
           ...textProps.style,
           display: textProps.style?.display || 'block'
         };
-        
+
         // 从textProps中提取style之外的其他属性
         const { style, content, ...otherTextProps } = textProps;
-        
+
         return <Typography.Text style={textStyle} {...otherTextProps}>{content}</Typography.Text>;
       case ComponentType.IMAGE:
         const imageProps = props as unknown as ImageProps;
@@ -210,7 +210,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
           boxSizing: 'border-box',
           overflow: 'visible'
         };
-        
+
         return (
           <QRCode
             value={qrcodeProps.value || 'https://baidu.com'}
@@ -224,32 +224,24 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       case ComponentType.GRID:
         const gridProps = props as unknown as GridProps;
         const columns = gridProps.columns || 1;
-        
-        // 创建或获取单元格
+
         const existingCells = gridProps.cells || [];
         let cells: GridCell[] = [];
-        
-        // 确保单元格数量与列数一致
+
         if (existingCells.length === columns) {
-          // 单元格数量正确，直接使用
           cells = existingCells;
         } else {
-          // 单元格数量不对，需要调整
-          // 创建新的单元格数组
           for (let i = 0; i < columns; i++) {
-            const cellId = `cell-${i+1}`;
-            // 尝试复用已有单元格
+            const cellId = `cell-${i + 1}`;
             const existingCell = existingCells.find(c => c.id === cellId);
             if (existingCell) {
               cells.push(existingCell);
             } else {
-              // 为每个单元格设置默认宽度 - 平分
               const equalWidth = 100 / columns;
               cells.push({ id: cellId, span: 1, width: equalWidth });
             }
           }
-          
-          // 异步更新组件属性，避免渲染过程中修改状态
+
           setTimeout(() => {
             updateComponent(component.id, {
               props: {
@@ -259,11 +251,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             });
           }, 0);
         }
-        
+
         return (
-          <div 
-            className="grid-container" 
-            style={{ 
+          <div
+            className="grid-container"
+            style={{
               ...gridProps.style,
               width: '100%',
               display: 'flex',
@@ -276,8 +268,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
               padding: '0',
               margin: 0,
               borderRadius: gridProps.style?.borderRadius || '4px',
-              boxShadow: gridProps.style?.boxShadow || (ispreview ? '' : '0 2px 8px rgba(0,0,0,0.08)'),
-              backgroundColor: gridProps.style?.backgroundColor || '#fafafa',
               alignItems: 'stretch',
               justifyContent: 'space-between',
               overflow: 'visible'
@@ -286,17 +276,17 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             {cells.slice(0, columns).map((cell, index) => {
               const cellChildren =
                 component.children?.filter((child) => child.props?.cellId === cell.id) || [];
-              
+
               // 获取单元格宽度比例 - 确保平分
               const cellWidth = `${cell.width || (100 / columns)}%`;
-              
+
               return (
                 <GridCell
+                  isSelected={isSelected}
                   key={cell.id}
                   cell={cell}
                   cellWidth={cellWidth}
                   component={component}
-                  ispreview={ispreview}
                   cellChildren={cellChildren}
                   addComponent={addComponent}
                   moveComponent={moveComponent}
@@ -452,7 +442,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       <ComponentWrapper
         ref={refCallback}
         onClick={handleClick}
-        isSelected={selectedId === component.id}
+        isSelected={isSelected}
         ispreview={ispreview}
         isGrid={component.type === ComponentType.GRID}
         style={{
@@ -460,7 +450,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
           cursor: ispreview ? 'default' : 'move',
           position: 'relative',
           gap: '4px',
-          overflow: 'visible', 
+          overflow: 'visible',
           // 确保组件自定义样式应用在所有内置样式之后
           ...(component.props.style as React.CSSProperties || {}),
         }}
@@ -469,7 +459,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       >
         {renderComponent()}
 
-        {!ispreview && selectedId === component.id && (
+        {!ispreview && isSelected && (
           <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
             <DeleteOutlined
               style={{ color: 'red', cursor: 'pointer' }}
@@ -485,30 +475,26 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   );
 };
 
-// 添加到合适的位置
-// 单元格容器组件
-const GridCell = memo(({ 
-  cell, 
-  cellWidth, 
-  component, 
-  ispreview, 
-  cellChildren, 
-  addComponent, 
+
+const GridCell = memo(({
+  cell,
+  cellWidth,
+  component,
+  cellChildren,
+  addComponent,
   moveComponent,
-  updateComponent,
-  index,
-  totalColumns
+  isSelected
 }: {
   cell: GridCell;
   cellWidth: string;
   component: ComponentInstance;
-  ispreview: boolean;
   cellChildren: ComponentInstance[];
   addComponent: (component: any) => void;
   moveComponent: (id: string, parentId: string, options: any) => void;
   updateComponent: (id: string, patch: any) => void;
   index: number;
   totalColumns: number;
+  isSelected: boolean;
 }) => {
   const [{ isOver }, drop] = useDrop<DragItem, unknown, { isOver: boolean }>({
     accept: ['COMPONENT', 'CANVAS_COMPONENT'],
@@ -516,7 +502,7 @@ const GridCell = memo(({
       if (monitor.didDrop()) {
         return;
       }
-      
+
       if (item.id && !item.id.includes('template')) {
         // 移动已有组件到单元格
         moveComponent(item.id, component.id, { cellId: cell.id });
@@ -549,9 +535,8 @@ const GridCell = memo(({
         width: cellWidth,
         minHeight: '100%',
         height: '100%',
-        // padding: '8px',
-        backgroundColor: ispreview ? 'transparent' : 'rgba(255, 255, 255, 0.8)',
-        border: ispreview ? 'none' : '1px dashed #e8e8e8',
+        backgroundColor: !isSelected ? 'transparent' : 'rgba(255, 255, 255, 0.8)',
+        border: !isSelected ? 'none' : '1px dashed #e8e8e8',
         borderRadius: '4px',
         boxShadow: 'none',
         display: 'flex',
@@ -572,14 +557,11 @@ const GridCell = memo(({
           overflow: 'visible',
         }}
       >
-        <div 
+        <div
           className="cell-content"
           style={{
             height: '100%',
             width: '100%',
-            // display: 'flex',
-            // flexDirection: 'column',
-            // gap: '6px',
             overflow: 'visible',
           }}
         >
@@ -599,9 +581,9 @@ const GridCell = memo(({
                 color: '#bbb',
                 fontSize: '14px',
                 fontStyle: 'italic',
-                backgroundColor: ispreview ? 'transparent' : isOver ? 'rgba(240, 242, 245, 0.4)' : 'rgba(248, 249, 250, 0.6)',
+                backgroundColor: isOver ? 'rgba(240, 242, 245, 0.4)' : '',
                 borderRadius: '2px',
-                border: ispreview ? 'none' : isOver ? '1px dashed #1890ff' : '1px dashed #e8e8e8'
+                border: isOver ? '1px dashed #1890ff' : '1px dashed #e8e8e8'
               }}
             >
               {isOver ? '放置组件到这里' : '拖拽组件到这里'}

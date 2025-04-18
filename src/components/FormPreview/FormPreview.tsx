@@ -33,8 +33,14 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
   React.useEffect(() => {
     // if (formData && Object.keys(formData).length > 0) {
     form.setFieldsValue({
+      title: "技术栈",
       name: '啊程',
-      gender:'男'
+      gender: '男',
+      desc: "技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；",
+      capacity: "全栈开发工程师(nodejs、React、Vue、uniapp、low-code和typescript)",
+      qrcode: "https://github.com/low-code-project",
+      phone: "12345678901",
+      date:"2025-04-17 18:00:00"
     });
     // }
   }, [formData, form]);
@@ -55,7 +61,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
       border: 'none',
       boxShadow: 'none',
       borderRadius: '0',
-      backgroundColor:'transparent'
+      backgroundColor: 'transparent'
     };
 
     switch (type) {
@@ -69,8 +75,8 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
             className={`preview-component preview-${type.toLowerCase()}`}
             initialValue={props.content}
           >
-           {formId? <CustomText
-              style={props.style || {}}/>:<Text style={props.style || {}}>{props.content}</Text>}
+            {formId ? <CustomText
+              style={props.style || {}} /> : <Text style={props.style || {}}>{props.content}</Text>}
           </Form.Item>
         );
 
@@ -104,13 +110,19 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
 
       case ComponentType.QRCODE:
         return (
-          <div key={id} style={cleanStyle} className={`preview-component preview-${type.toLowerCase()}`}>
+          <Form.Item
+            key={id}
+            name={formId}
+            className={`preview-component preview-${type.toLowerCase()}`}
+            initialValue={props.content}
+            noStyle
+          >
             <QRCode
-              value={props.value || ''}
+              // style={props.style || {}}
               size={props.size || 128}
-              style={{ maxWidth: '100%' }}
+              style={{ maxWidth: '100%', border: 'none' }}
             />
-          </div>
+          </Form.Item>
         );
 
       case ComponentType.GRID:
@@ -170,7 +182,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
   );
 };
 
-const CustomText = ({value,...res})=>{ 
+const CustomText = ({ value, ...res }) => {
   return <Text {...res}>{value}</Text>
 }
 export default FormPreview;
