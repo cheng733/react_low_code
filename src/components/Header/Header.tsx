@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Space, Button, Radio, Tooltip, Modal, Tabs } from 'antd';
+import React, { useState, useRef } from 'react';
+import { Space, Button, Radio, Tooltip, Modal, Tabs, Upload, message } from 'antd';
 import {
   EyeOutlined,
   PrinterOutlined,
@@ -7,6 +7,7 @@ import {
   UndoOutlined,
   RedoOutlined,
   CodeOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useStore } from '../../store/useStore';
 import { CanvasSize } from '../../types';
@@ -40,11 +41,13 @@ const Header: React.FC = () => {
     undo,
     redo,
     exportToJSON,
+    importFromJSON,
     contentRef
   } = useStore();
 
   const [codePreviewVisible, setCodePreviewVisible] = useState(false);
-  const [isPreview, setIspreview] = useState(false)
+  const [isPreview, setIspreview] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const reactToPrintFn = useReactToPrint({ contentRef });
   const handlePrint = () => {
     reactToPrintFn()
@@ -65,6 +68,42 @@ const Header: React.FC = () => {
 
   const handleCodePreview = () => {
     setCodePreviewVisible(true);
+  };
+
+  const handleImport = () => {
+    // Trigger the hidden file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        // Validate JSON format
+        JSON.parse(json);
+        // Import the JSON
+        importFromJSON(json);
+        message.success('导入成功');
+      } catch (error) {
+        console.error('导入失败:', error);
+        message.error('导入失败: 无效的JSON格式');
+      }
+    };
+    reader.onerror = () => {
+      message.error('读取文件失败');
+    };
+    reader.readAsText(file);
+    
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const generateReactCode = () => {
@@ -178,9 +217,19 @@ const Header: React.FC = () => {
         <Tooltip title="导出">
           <Button icon={<SaveOutlined />} onClick={handleExport} />
         </Tooltip>
+        <Tooltip title="导入">
+          <Button icon={<ImportOutlined />} onClick={handleImport} />
+        </Tooltip>
         <Tooltip title="代码预览">
           <Button icon={<CodeOutlined />} onClick={handleCodePreview} />
         </Tooltip>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".json"
+          onChange={handleFileChange}
+        />
       </Space>
 
 
