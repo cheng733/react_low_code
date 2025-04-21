@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input, Typography, Image, QRCode, Form } from 'antd';
 import styled from 'styled-components';
-import { ComponentInstance, ComponentType, CanvasState } from '../../types';
+import { ComponentInstance, ComponentType, CanvasState, ProcessorType, DataProcessor } from '../../types';
 
 const { Text } = Typography;
 
@@ -28,22 +28,97 @@ interface FormPreviewProps {
  */
 const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValuesChange }) => {
   const [form] = Form.useForm();
+  const processors = json.canvas.dataProcessorConfig?.processors || [];
+
+  // Create a default form data object
+  const defaultFormData = {
+    title: "技术栈",
+    name: '啊程',
+    gender: '男',
+    desc: "技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；",
+    capacity: "全栈开发工程师(nodejs、React、Vue、uniapp、low-code和typescript)",
+    qrcode: "https://github.com/low-code-project",
+    phone: "12345678901",
+    date:"2025-04-17 18:00:00"
+  };
+  
+  // Merge with provided formData
+  const mergedData = { ...defaultFormData, ...formData };
+
+  // Process a field value based on the processor rules
+  const processFieldValue = (fieldId: string, value: any): any => {
+    const processor = processors.find(p => p.fieldId === fieldId && p.enabled);
+    if (!processor || value === undefined || value === null) return value;
+
+    try {
+      switch (processor.processorType) {
+        case ProcessorType.PREFIX:
+          return `${processor.processorValue || ''}${value}`;
+        case ProcessorType.SUFFIX:
+          return `${value}${processor.processorValue || ''}`;
+        case ProcessorType.REPLACE:
+          return processor.processorValue || value;
+        case ProcessorType.TRANSFORM:
+          if (processor.customProcessor) {
+            try {
+              // Get all field values including the current value
+              const allValues = {
+                ...mergedData,
+                value // Make the current field value available as 'value'
+              };
+              
+              // Create a safe evaluation context with all field values as variables
+              const contextKeys = Object.keys(allValues);
+              const contextValues = contextKeys.map(key => allValues[key]);
+              
+              // Create a template literal evaluator function that has access to all field values
+              const templateFunction = new Function(
+                ...contextKeys, // Parameters are all field names
+                `try { ${processor.customProcessor} } catch (e) { console.error(e); return value; }`
+              );
+              
+              // Call the function with all field values
+              return templateFunction(...contextValues);
+            } catch (error) {
+              console.error('Error executing custom processor:', error);
+              return value;
+            }
+          }
+          return value;
+        case ProcessorType.CONDITIONAL:
+          if (processor.processorCondition && processor.processorValue) {
+            try {
+              // Create a function from the condition string
+              const conditionFn = new Function('value', `return ${processor.processorCondition}`);
+              return conditionFn(value) ? processor.processorValue : value;
+            } catch (error) {
+              console.error('Error evaluating condition:', error);
+              return value;
+            }
+          }
+          return value;
+        case ProcessorType.NONE:
+        default:
+          return value;
+      }
+    } catch (error) {
+      console.error(`Error processing field ${fieldId}:`, error);
+      return value;
+    }
+  };
 
   // Set initial values from formData
   React.useEffect(() => {
-    // if (formData && Object.keys(formData).length > 0) {
-    form.setFieldsValue({
-      title: "技术栈",
-      name: '啊程',
-      gender: '男',
-      desc: "技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；技术不止于代码；",
-      capacity: "全栈开发工程师(nodejs、React、Vue、uniapp、low-code和typescript)",
-      qrcode: "https://github.com/low-code-project",
-      phone: "12345678901",
-      date:"2025-04-17 18:00:00"
-    });
-    // }
-  }, [formData, form]);
+    
+    // Process all values according to processing rules
+    const processedData = Object.keys(mergedData).reduce((acc, key) => {
+      acc[key] = processFieldValue(key, mergedData[key]);
+      return acc;
+    }, {} as Record<string, any>);
+    
+    // Set the processed values to the form
+    form.setFieldsValue(processedData);
+  }, [formData, form, processors]);
 
   // Recursively render components
   const renderComponents = (comps: ComponentInstance[]) => {

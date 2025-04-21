@@ -13,6 +13,10 @@ export enum ComponentType {
   CANVAS = 'canvas'
 }
 
+// 导入数据处理器配置
+import { DataProcessorConfig } from './dataProcessor';
+export * from './dataProcessor';
+
 // 组件分类
 export enum ComponentCategory {
   LAYOUT = 'layout',
@@ -51,6 +55,7 @@ export interface CanvasState {
   padding:string;
   backgroundColor: string;
   style:CSSStyleRule;
+  dataProcessorConfig?: DataProcessorConfig; // 添加数据处理器配置
 }
 
 // 历史记录操作类型

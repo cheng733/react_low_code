@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Space, Button, Radio, Tooltip, Modal, Tabs, Upload, message } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Space, Button, Radio, Tooltip, Modal, Tabs, message, Form, Input, Select, Table, Popconfirm, Switch } from 'antd';
 import {
   EyeOutlined,
   PrinterOutlined,
@@ -8,9 +8,13 @@ import {
   RedoOutlined,
   CodeOutlined,
   ImportOutlined,
+  ToolOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useStore } from '../../store/useStore';
-import { CanvasSize } from '../../types';
+import { CanvasSize, ProcessorType, DataProcessor } from '../../types';
 import styled from 'styled-components';
 import { useReactToPrint } from 'react-to-print';
 import FormPreview from '../FormPreview/FormPreview';
@@ -42,11 +46,16 @@ const Header: React.FC = () => {
     redo,
     exportToJSON,
     importFromJSON,
+    updateCanvas,
     contentRef
   } = useStore();
 
   const [codePreviewVisible, setCodePreviewVisible] = useState(false);
   const [isPreview, setIspreview] = useState(false);
+  const [processorModalVisible, setProcessorModalVisible] = useState(false);
+  const [processors, setProcessors] = useState<DataProcessor[]>([]);
+  const [editingProcessor, setEditingProcessor] = useState<DataProcessor | null>(null);
+  const [processorForm] = Form.useForm();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reactToPrintFn = useReactToPrint({ contentRef });
   const handlePrint = () => {
@@ -184,6 +193,93 @@ const Header: React.FC = () => {
   const handlePreview = () => {
     setIspreview(!isPreview);
   }
+  
+  // 打开数据处理管理界面
+  const handleOpenProcessorModal = () => {
+    // 从canvas中获取现有的处理规则
+    const currentProcessors = canvas.dataProcessorConfig?.processors || [];
+    setProcessors([...currentProcessors]);
+    setProcessorModalVisible(true);
+  };
+
+  // 添加或编辑处理规则
+  const handleAddEditProcessor = (values: any) => {
+    const newProcessor: DataProcessor = {
+      fieldId: values.fieldId,
+      processorType: values.processorType,
+      processorValue: values.processorValue,
+      processorCondition: values.processorCondition,
+      customProcessor: values.customProcessor,
+      enabled: values.enabled !== undefined ? values.enabled : true
+    };
+
+    if (editingProcessor) {
+      // 编辑现有规则
+      const updatedProcessors = processors.map(p => 
+        p.fieldId === editingProcessor.fieldId ? newProcessor : p
+      );
+      setProcessors(updatedProcessors);
+    } else {
+      // 添加新规则
+      setProcessors([...processors, newProcessor]);
+    }
+
+    processorForm.resetFields();
+    setEditingProcessor(null);
+  };
+
+  // 删除处理规则
+  const handleDeleteProcessor = (fieldId: string) => {
+    setProcessors(processors.filter(p => p.fieldId !== fieldId));
+  };
+
+  // 编辑处理规则
+  const handleEditProcessor = (processor: DataProcessor) => {
+    setEditingProcessor(processor);
+    processorForm.setFieldsValue({
+      fieldId: processor.fieldId,
+      processorType: processor.processorType,
+      processorValue: processor.processorValue,
+      processorCondition: processor.processorCondition,
+      customProcessor: processor.customProcessor,
+      enabled: processor.enabled
+    });
+  };
+
+  // 切换处理规则启用状态
+  const handleToggleProcessor = (fieldId: string, enabled: boolean) => {
+    const updatedProcessors = processors.map(p => 
+      p.fieldId === fieldId ? { ...p, enabled } : p
+    );
+    setProcessors(updatedProcessors);
+  };
+
+  // 保存所有处理规则到canvas
+  const handleSaveProcessors = () => {
+    updateCanvas({ 
+      dataProcessorConfig: { 
+        processors 
+      } 
+    });
+    setProcessorModalVisible(false);
+    message.success('数据处理规则已保存');
+  };
+
+  // 当编辑的processor改变时，更新表单
+  useEffect(() => {
+    if (editingProcessor) {
+      processorForm.setFieldsValue({
+        fieldId: editingProcessor.fieldId,
+        processorType: editingProcessor.processorType,
+        processorValue: editingProcessor.processorValue,
+        processorCondition: editingProcessor.processorCondition,
+        customProcessor: editingProcessor.customProcessor,
+        enabled: editingProcessor.enabled
+      });
+    } else {
+      processorForm.resetFields();
+    }
+  }, [editingProcessor, processorForm]);
   return (
     <HeaderContainer>
       <Space>
@@ -219,6 +315,9 @@ const Header: React.FC = () => {
         </Tooltip>
         <Tooltip title="导入">
           <Button icon={<ImportOutlined />} onClick={handleImport} />
+        </Tooltip>
+        <Tooltip title="数据处理">
+          <Button icon={<ToolOutlined />} onClick={handleOpenProcessorModal} />
         </Tooltip>
         <Tooltip title="代码预览">
           <Button icon={<CodeOutlined />} onClick={handleCodePreview} />
@@ -267,6 +366,233 @@ const Header: React.FC = () => {
         <FormPreview json={JSON.parse(exportToJSON())} />
       </Modal>
 
+      {/* 数据处理管理模态框 */}
+      <Modal
+        title="数据处理管理"
+        open={processorModalVisible}
+        onCancel={() => setProcessorModalVisible(false)}
+        width={800}
+        footer={[
+          <Button key="cancel" onClick={() => setProcessorModalVisible(false)}>
+            取消
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSaveProcessors}>
+            保存
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Form
+            form={processorForm}
+            layout="vertical"
+            onFinish={handleAddEditProcessor}
+          >
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <Form.Item
+                name="fieldId"
+                label="字段ID"
+                rules={[{ required: true, message: '请输入字段ID' }]}
+                style={{ flex: 1 }}
+              >
+                <Input placeholder="输入表单字段ID" disabled={!!editingProcessor} />
+              </Form.Item>
+              
+              <Form.Item
+                name="processorType"
+                label="处理类型"
+                rules={[{ required: true, message: '请选择处理类型' }]}
+                style={{ flex: 1 }}
+              >
+                <Select placeholder="选择处理类型">
+                  <Select.Option value={ProcessorType.PREFIX}>前缀</Select.Option>
+                  <Select.Option value={ProcessorType.SUFFIX}>后缀</Select.Option>
+                  <Select.Option value={ProcessorType.REPLACE}>替换</Select.Option>
+                  <Select.Option value={ProcessorType.TRANSFORM}>自定义转换</Select.Option>
+                  <Select.Option value={ProcessorType.CONDITIONAL}>条件处理</Select.Option>
+                  <Select.Option value={ProcessorType.NONE}>不处理</Select.Option>
+                </Select>
+              </Form.Item>
+            </div>
+
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => 
+                prevValues.processorType !== currentValues.processorType
+              }
+            >
+              {({ getFieldValue }) => {
+                const processorType = getFieldValue('processorType');
+                
+                if (processorType === ProcessorType.PREFIX || processorType === ProcessorType.SUFFIX || processorType === ProcessorType.REPLACE) {
+                  return (
+                    <Form.Item
+                      name="processorValue"
+                      label="处理值"
+                      rules={[{ required: true, message: '请输入处理值' }]}
+                    >
+                      <Input placeholder={processorType === ProcessorType.PREFIX ? '输入前缀' : processorType === ProcessorType.SUFFIX ? '输入后缀' : '输入替换值'} />
+                    </Form.Item>
+                  );
+                }
+                
+                if (processorType === ProcessorType.CONDITIONAL) {
+                  return (
+                    <>
+                      <Form.Item
+                        name="processorCondition"
+                        label="条件表达式"
+                        rules={[{ required: true, message: '请输入条件表达式' }]}
+                      >
+                        <Input placeholder="例如: value.length > 10" />
+                      </Form.Item>
+                      <Form.Item
+                        name="processorValue"
+                        label="条件满足时的值"
+                        rules={[{ required: true, message: '请输入条件满足时的值' }]}
+                      >
+                        <Input placeholder="条件满足时显示的值" />
+                      </Form.Item>
+                    </>
+                  );
+                }
+                
+                if (processorType === ProcessorType.TRANSFORM) {
+                  return (
+                    <>
+                      <Form.Item
+                        name="customProcessor"
+                        label="自定义处理函数"
+                        rules={[{ required: true, message: '请输入自定义处理函数' }]}
+                        extra="可使用${fieldId}语法引用其他字段值"
+                      >
+                        <Input.TextArea 
+                          placeholder="例如: return `尊敬的$&#123;name&#125;您好，您的手机号是$&#123;phone&#125;`" 
+                          autoSize={{ minRows: 3, maxRows: 6 }}
+                        />
+                      </Form.Item>
+                      <div style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
+                        <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>模板语法示例：</div>
+                        <div style={{ margin: 0, paddingLeft: '20px' }}>
+                          <p>示例1: return `您好，$&#123;name&#125;`; - 在文本中嵌入字段值</p>
+                          <p>示例2: return `$&#123;name&#125;的手机号是$&#123;phone&#125;`; - 组合多个字段</p>
+                          <p>示例3: return `当前值: $&#123;value&#125;`; - 使用当前字段值</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                }
+                
+                return null;
+              }}
+            </Form.Item>
+
+            <Form.Item name="enabled" valuePropName="checked" initialValue={true}>
+              <Switch checkedChildren="启用" unCheckedChildren="禁用" defaultChecked />
+            </Form.Item>
+
+            <Form.Item>
+              <Button 
+                type="primary" 
+                htmlType="submit"
+                icon={editingProcessor ? <EditOutlined /> : <PlusOutlined />}
+              >
+                {editingProcessor ? '更新' : '添加'}
+              </Button>
+              {editingProcessor && (
+                <Button 
+                  style={{ marginLeft: 8 }} 
+                  onClick={() => {
+                    setEditingProcessor(null);
+                    processorForm.resetFields();
+                  }}
+                >
+                  取消
+                </Button>
+              )}
+            </Form.Item>
+          </Form>
+        </div>
+
+        <Table
+          dataSource={processors}
+          rowKey="fieldId"
+          pagination={false}
+          columns={[
+            {
+              title: '字段ID',
+              dataIndex: 'fieldId',
+              key: 'fieldId',
+            },
+            {
+              title: '处理类型',
+              dataIndex: 'processorType',
+              key: 'processorType',
+              render: (type) => {
+                const typeMap: Record<string, string> = {
+                  [ProcessorType.PREFIX]: '前缀',
+                  [ProcessorType.SUFFIX]: '后缀',
+                  [ProcessorType.REPLACE]: '替换',
+                  [ProcessorType.TRANSFORM]: '自定义转换',
+                  [ProcessorType.CONDITIONAL]: '条件处理',
+                  [ProcessorType.NONE]: '不处理',
+                };
+                return typeMap[type] || type;
+              }
+            },
+            {
+              title: '处理值/条件',
+              key: 'processorValue',
+              render: (_, record) => {
+                if (record.processorType === ProcessorType.PREFIX || 
+                    record.processorType === ProcessorType.SUFFIX || 
+                    record.processorType === ProcessorType.REPLACE) {
+                  return record.processorValue || '-';
+                }
+                if (record.processorType === ProcessorType.CONDITIONAL) {
+                  return record.processorCondition ? `${record.processorCondition} => ${record.processorValue}` : '-';
+                }
+                if (record.processorType === ProcessorType.TRANSFORM) {
+                  return record.customProcessor ? '自定义函数' : '-';
+                }
+                return '-';
+              },
+            },
+            {
+              title: '状态',
+              key: 'enabled',
+              render: (_, record) => (
+                <Switch 
+                  checked={record.enabled} 
+                  onChange={(checked) => handleToggleProcessor(record.fieldId, checked)}
+                  checkedChildren="启用" 
+                  unCheckedChildren="禁用"
+                />
+              ),
+            },
+            {
+              title: '操作',
+              key: 'action',
+              render: (_, record) => (
+                <Space size="small">
+                  <Button 
+                    type="text" 
+                    icon={<EditOutlined />} 
+                    onClick={() => handleEditProcessor(record)}
+                  />
+                  <Popconfirm
+                    title="确定要删除这个处理规则吗？"
+                    onConfirm={() => handleDeleteProcessor(record.fieldId)}
+                    okText="是"
+                    cancelText="否"
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </Modal>
     </HeaderContainer>
   );
 };
