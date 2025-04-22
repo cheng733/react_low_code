@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Input, Typography, Image, QRCode, Form } from 'antd';
 import styled from 'styled-components';
-import { ComponentInstance, ComponentType, CanvasState, ProcessorType, DataProcessor } from '../../types';
+import { ComponentInstance, ComponentType, CanvasState, ProcessorType } from '../../types';
 
 const { Text } = Typography;
 
@@ -11,7 +11,7 @@ const PreviewContainer = styled.div<CanvasState>`
   ${({ width, height, padding }) =>
     `width: ${width}px;
   height: ${height}px;
-  padding: ${padding}px;
+  padding: ${padding};
   `
   }
 `;
@@ -26,7 +26,7 @@ interface FormPreviewProps {
  * FormPreview component renders components as a form without borders or shadows
  * It uses the formId property of components to bind form data
  */
-const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValuesChange }) => {
+const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, formData = {}, onValuesChange }, ref) => {
   const [form] = Form.useForm();
   const processors = json.canvas.dataProcessorConfig?.processors || [];
 
@@ -39,9 +39,9 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
     capacity: "全栈开发工程师(nodejs、React、Vue、uniapp、low-code和typescript)",
     qrcode: "https://github.com/low-code-project",
     phone: "12345678901",
-    date:"2025-04-17 18:00:00"
+    date: "2025-04-17 18:00:00"
   };
-  
+
   // Merge with provided formData
   const mergedData = { ...defaultFormData, ...formData };
 
@@ -66,17 +66,17 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
                 ...mergedData,
                 value // Make the current field value available as 'value'
               };
-              
+
               // Create a safe evaluation context with all field values as variables
               const contextKeys = Object.keys(allValues);
               const contextValues = contextKeys.map(key => allValues[key]);
-              
+
               // Create a template literal evaluator function that has access to all field values
               const templateFunction = new Function(
                 ...contextKeys, // Parameters are all field names
                 `try { ${processor.customProcessor} } catch (e) { console.error(e); return value; }`
               );
-              
+
               // Call the function with all field values
               return templateFunction(...contextValues);
             } catch (error) {
@@ -108,18 +108,17 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
   };
 
   // Set initial values from formData
-  React.useEffect(() => {
-    
+  useEffect(() => {
+
     // Process all values according to processing rules
     const processedData = Object.keys(mergedData).reduce((acc, key) => {
       acc[key] = processFieldValue(key, mergedData[key]);
       return acc;
     }, {} as Record<string, any>);
-    
+
     // Set the processed values to the form
     form.setFieldsValue(processedData);
   }, [formData, form, processors]);
-
   // Recursively render components
   const renderComponents = (comps: ComponentInstance[]) => {
     return comps.map((component) => renderComponent(component));
@@ -245,7 +244,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
   };
 
   return (
-    <PreviewContainer {...json.canvas}>
+    <PreviewContainer {...json.canvas} ref={ref} style={json.canvas.style}>
       <Form
         form={form}
         layout="vertical"
@@ -255,7 +254,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ json, formData = {}, onValues
       </Form>
     </PreviewContainer>
   );
-};
+});
 
 const CustomText = ({ value, ...res }) => {
   return <Text {...res}>{value}</Text>

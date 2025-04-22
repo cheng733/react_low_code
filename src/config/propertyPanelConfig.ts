@@ -154,7 +154,13 @@ const commonStyleProperties: PropertyConfig[] = [
 ];
 
 const canvasProperties: PropertyConfig[] = [
-...commonStyleProperties
+  {
+    key: 'style.padding',
+    label: '内边距',
+    type: PropertyType.PADDING,
+    group: '间距',
+    defaultValue:'10px'
+  },
 ];
 
 const textProperties: PropertyConfig[] = [

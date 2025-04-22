@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, MouseEvent } from 'react';
 import { Space, Button, Radio, Tooltip, Modal, Tabs, message, Form, Input, Select, Table, Popconfirm, Switch } from 'antd';
 import {
   EyeOutlined,
@@ -18,6 +18,7 @@ import { CanvasSize, ProcessorType, DataProcessor } from '../../types';
 import styled from 'styled-components';
 import { useReactToPrint } from 'react-to-print';
 import FormPreview from '../FormPreview/FormPreview';
+import confetti from 'canvas-confetti'
 
 const HeaderContainer = styled.div`
   padding: 8px 16px;
@@ -47,7 +48,6 @@ const Header: React.FC = () => {
     exportToJSON,
     importFromJSON,
     updateCanvas,
-    contentRef
   } = useStore();
 
   const [codePreviewVisible, setCodePreviewVisible] = useState(false);
@@ -56,6 +56,7 @@ const Header: React.FC = () => {
   const [processors, setProcessors] = useState<DataProcessor[]>([]);
   const [editingProcessor, setEditingProcessor] = useState<DataProcessor | null>(null);
   const [processorForm] = Form.useForm();
+  const contentRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reactToPrintFn = useReactToPrint({ contentRef });
   const handlePrint = () => {
@@ -108,7 +109,7 @@ const Header: React.FC = () => {
       message.error('读取文件失败');
     };
     reader.readAsText(file);
-    
+
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -193,7 +194,7 @@ const Header: React.FC = () => {
   const handlePreview = () => {
     setIspreview(!isPreview);
   }
-  
+
   // 打开数据处理管理界面
   const handleOpenProcessorModal = () => {
     // 从canvas中获取现有的处理规则
@@ -215,7 +216,7 @@ const Header: React.FC = () => {
 
     if (editingProcessor) {
       // 编辑现有规则
-      const updatedProcessors = processors.map(p => 
+      const updatedProcessors = processors.map(p =>
         p.fieldId === editingProcessor.fieldId ? newProcessor : p
       );
       setProcessors(updatedProcessors);
@@ -248,18 +249,27 @@ const Header: React.FC = () => {
 
   // 切换处理规则启用状态
   const handleToggleProcessor = (fieldId: string, enabled: boolean) => {
-    const updatedProcessors = processors.map(p => 
+    const updatedProcessors = processors.map(p =>
       p.fieldId === fieldId ? { ...p, enabled } : p
     );
     setProcessors(updatedProcessors);
   };
 
   // 保存所有处理规则到canvas
-  const handleSaveProcessors = () => {
-    updateCanvas({ 
-      dataProcessorConfig: { 
-        processors 
-      } 
+  const handleSaveProcessors = (e: MouseEvent<HTMLButtonElement>) => {
+    confetti({
+      particleCount: 200,
+      spread: 180,
+      zIndex: 9999,
+      origin: {
+        x: e.clientX / innerWidth,
+        y: e.clientY / innerHeight
+      }
+    })
+    updateCanvas({
+      dataProcessorConfig: {
+        processors
+      }
     });
     setProcessorModalVisible(false);
     message.success('数据处理规则已保存');
@@ -355,7 +365,7 @@ const Header: React.FC = () => {
           ]}
         />
       </Modal>
-
+      <div style={{ display: 'none' }}><FormPreview json={JSON.parse(exportToJSON())} ref={contentRef} /></div>
       <Modal
         title="UI预览"
         open={isPreview}
@@ -396,7 +406,7 @@ const Header: React.FC = () => {
               >
                 <Input placeholder="输入表单字段ID" disabled={!!editingProcessor} />
               </Form.Item>
-              
+
               <Form.Item
                 name="processorType"
                 label="处理类型"
@@ -416,13 +426,13 @@ const Header: React.FC = () => {
 
             <Form.Item
               noStyle
-              shouldUpdate={(prevValues, currentValues) => 
+              shouldUpdate={(prevValues, currentValues) =>
                 prevValues.processorType !== currentValues.processorType
               }
             >
               {({ getFieldValue }) => {
                 const processorType = getFieldValue('processorType');
-                
+
                 if (processorType === ProcessorType.PREFIX || processorType === ProcessorType.SUFFIX || processorType === ProcessorType.REPLACE) {
                   return (
                     <Form.Item
@@ -434,7 +444,7 @@ const Header: React.FC = () => {
                     </Form.Item>
                   );
                 }
-                
+
                 if (processorType === ProcessorType.CONDITIONAL) {
                   return (
                     <>
@@ -455,7 +465,7 @@ const Header: React.FC = () => {
                     </>
                   );
                 }
-                
+
                 if (processorType === ProcessorType.TRANSFORM) {
                   return (
                     <>
@@ -465,8 +475,8 @@ const Header: React.FC = () => {
                         rules={[{ required: true, message: '请输入自定义处理函数' }]}
                         extra="可使用${fieldId}语法引用其他字段值"
                       >
-                        <Input.TextArea 
-                          placeholder="例如: return `尊敬的$&#123;name&#125;您好，您的手机号是$&#123;phone&#125;`" 
+                        <Input.TextArea
+                          placeholder="例如: return `尊敬的$&#123;name&#125;您好，您的手机号是$&#123;phone&#125;`"
                           autoSize={{ minRows: 3, maxRows: 6 }}
                         />
                       </Form.Item>
@@ -481,7 +491,7 @@ const Header: React.FC = () => {
                     </>
                   );
                 }
-                
+
                 return null;
               }}
             </Form.Item>
@@ -491,16 +501,16 @@ const Header: React.FC = () => {
             </Form.Item>
 
             <Form.Item>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 htmlType="submit"
                 icon={editingProcessor ? <EditOutlined /> : <PlusOutlined />}
               >
                 {editingProcessor ? '更新' : '添加'}
               </Button>
               {editingProcessor && (
-                <Button 
-                  style={{ marginLeft: 8 }} 
+                <Button
+                  style={{ marginLeft: 8 }}
                   onClick={() => {
                     setEditingProcessor(null);
                     processorForm.resetFields();
@@ -543,9 +553,9 @@ const Header: React.FC = () => {
               title: '处理值/条件',
               key: 'processorValue',
               render: (_, record) => {
-                if (record.processorType === ProcessorType.PREFIX || 
-                    record.processorType === ProcessorType.SUFFIX || 
-                    record.processorType === ProcessorType.REPLACE) {
+                if (record.processorType === ProcessorType.PREFIX ||
+                  record.processorType === ProcessorType.SUFFIX ||
+                  record.processorType === ProcessorType.REPLACE) {
                   return record.processorValue || '-';
                 }
                 if (record.processorType === ProcessorType.CONDITIONAL) {
@@ -561,10 +571,10 @@ const Header: React.FC = () => {
               title: '状态',
               key: 'enabled',
               render: (_, record) => (
-                <Switch 
-                  checked={record.enabled} 
+                <Switch
+                  checked={record.enabled}
                   onChange={(checked) => handleToggleProcessor(record.fieldId, checked)}
-                  checkedChildren="启用" 
+                  checkedChildren="启用"
                   unCheckedChildren="禁用"
                 />
               ),
@@ -574,9 +584,9 @@ const Header: React.FC = () => {
               key: 'action',
               render: (_, record) => (
                 <Space size="small">
-                  <Button 
-                    type="text" 
-                    icon={<EditOutlined />} 
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
                     onClick={() => handleEditProcessor(record)}
                   />
                   <Popconfirm
