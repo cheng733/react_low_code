@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { useStore } from '../../store/useStore';
 import CanvasComponent from './CanvasComponent';
@@ -50,7 +50,6 @@ const Canvas: React.FC = () => {
     backgroundColor: canvas.backgroundColor || '#fff',
     border: isOver && !ispreview ? '2px dashed #1890ff' : '1px solid #e8e8e8',
     padding: canvas.padding || '0',
-    margin: canvas.margin || '0',
   };
 
   if (canvas.style) {

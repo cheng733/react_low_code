@@ -1,10 +1,10 @@
-import React, { useRef, useCallback, memo } from 'react';
-import { useDrag, useDrop, DropTargetMonitor } from 'react-dnd';
+import React, {  memo } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
 import { useStore } from '../../store/useStore';
 import { ComponentInstance, ComponentType } from '../../types';
-import { Input, Typography, Image, QRCode, Slider } from 'antd';
+import { Input, Typography, Image, QRCode } from 'antd';
 import styled, { createGlobalStyle } from 'styled-components';
-import { DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import { set, cloneDeep } from 'lodash';
 
 // 添加全局样式以修复组件显示模式问题

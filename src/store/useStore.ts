@@ -63,11 +63,6 @@ export const useStore = create<EditorState>()(
     ispreview: false,
     showCodePreview: false,
     contentRef: null,
-    saveContentRef: (ref) => {
-      set((state) => {
-        state.contentRef = ref;
-      });
-    },
     updateComponent: (id, props) => {
       set((state) => {
         const updateComponentById = (
