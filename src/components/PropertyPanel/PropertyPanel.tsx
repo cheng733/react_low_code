@@ -72,15 +72,15 @@ const PropertyPanel: React.FC = () => {
     return groups;
   }, [propertyConfigs]);
 
-  const handlePropertyChange = (key: string, value: any) => {
+  const handlePropertyChange = (key: string, value: unknown) => {
     if (!selectedComponent) {
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
       if (key.includes('.')) {
         const [parent, child] = key.split('.');
         if (!updates[parent]) {
           updates[parent] = {};
         }
-        updates[parent][child] = value;
+        (updates[parent] as Record<string, unknown>)[child] = value;
       } else {
         updates[key] = value;
       }

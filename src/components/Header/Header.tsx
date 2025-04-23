@@ -14,7 +14,7 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { useStore } from '../../store/useStore';
-import { CanvasSize, ProcessorType, DataProcessor } from '../../types';
+import { CanvasSize, ProcessorType, DataProcessor, ComponentInstance } from '../../types';
 import styled from 'styled-components';
 import { useReactToPrint } from 'react-to-print';
 import FormPreview from '../FormPreview/FormPreview';
@@ -127,39 +127,50 @@ const Header: React.FC = () => {
     code += `    <div style={{ width: '${json.canvas.width}px', height: '${json.canvas.height}px', padding: '${json.canvas.padding || '0px'}' }}>\n`;
 
     // 递归生成组件代码
-    const generateComponentCode = (components, indent = 6) => {
+    const generateComponentCode = (components: ComponentInstance[], indent: number = 6) => {
       let componentCode = '';
-      components.forEach(comp => {
+      components.forEach((comp: ComponentInstance) => {
         const indentStr = ' '.repeat(indent);
         const style = comp.props?.style ? JSON.stringify(comp.props.style) : '{}';
 
         switch (comp.type) {
-          case 'text':
+          case 'text': {
             componentCode += `${indentStr}<Typography.Text style={${style}}>${comp.props?.content || ''}</Typography.Text>\n`;
             break;
-          case 'input':
+          }
+          case 'input': {
             componentCode += `${indentStr}<Input style={${style}} placeholder="${comp.props?.placeholder || ''}" />\n`;
             break;
-          case 'image':
+          }
+          case 'image': {
             componentCode += `${indentStr}<Image style={${style}} src="${comp.props?.src || ''}" />\n`;
             break;
-          case 'qrcode':
+          }
+          case 'qrcode': {
             componentCode += `${indentStr}<QRCode style={${style}} value="${comp.props?.value || 'https://baidu.com'}" />\n`;
             break;
-          case 'grid':
-            const cells = comp.props?.cells || [];
+          }
+          case 'grid': {
+            interface GridCell {
+              id: string;
+              width?: number;
+              span?: number;
+            }
+            const cells = comp.props?.cells || [] as GridCell[];
             componentCode += `${indentStr}<div style={${style}} className="grid-container">\n`;
 
             // 处理网格单元格
-            if (cells.length > 0) {
-              componentCode += `${indentStr}  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '${(comp.props?.gutter?.[0] || 16)}px' }}>\n`;
+            if ((cells as GridCell[]).length > 0) {
+              const horizontalGutter = Array.isArray(comp.props?.gutter) ? comp.props.gutter[0] : 16;
+              componentCode += `${indentStr}  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '${horizontalGutter}px' }}>\n`;
 
-              cells.forEach(cell => {
-                const cellWidth = (cell.span / 24) * 100;
-                componentCode += `${indentStr}    <div style={{ width: '${cellWidth}%', marginBottom: '${(comp.props?.gutter?.[1] || 16)}px' }}>\n`;
+              (cells as GridCell[]).forEach((cell: GridCell) => {
+                const cellWidth = ((cell.span || 1) / 24) * 100;
+                const verticalGutter = Array.isArray(comp.props?.gutter) ? comp.props.gutter[1] : 16;
+                componentCode += `${indentStr}    <div style={{ width: '${cellWidth}%', marginBottom: '${verticalGutter}px' }}>\n`;
 
                 // 查找属于该单元格的子组件
-                const cellChildren = comp.children?.filter(child => child.props?.cellId === cell.id) || [];
+                const cellChildren = comp.children?.filter((child: ComponentInstance) => child.props?.cellId === cell.id) || [];
                 if (cellChildren.length > 0) {
                   componentCode += generateComponentCode(cellChildren, indent + 6);
                 }
@@ -175,8 +186,10 @@ const Header: React.FC = () => {
 
             componentCode += `${indentStr}</div>\n`;
             break;
-          default:
+          }
+          default: {
             componentCode += `${indentStr}<div style={${style}}></div>\n`;
+          }
         }
       });
       return componentCode;
@@ -204,7 +217,17 @@ const Header: React.FC = () => {
   };
 
   // 添加或编辑处理规则
-  const handleAddEditProcessor = (values: any) => {
+  interface ProcessorFormValues {
+    fieldId: string;
+    processorType: ProcessorType;
+    processorValue?: string;
+    processorCondition?: string;
+    customProcessor?: string;
+    enabled?: boolean;
+    description?: string;
+  }
+
+  const handleAddEditProcessor = (values: ProcessorFormValues) => {
     const newProcessor: DataProcessor = {
       fieldId: values.fieldId,
       processorType: values.processorType,

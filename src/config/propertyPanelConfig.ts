@@ -23,10 +23,10 @@ export interface PropertyConfig {
   key: string;             // 属性键名
   label: string;           // 属性标签
   type: PropertyType;      // 属性类型
-  defaultValue?: any;      // 默认值
+  defaultValue?: unknown;  // 默认值
   options?: Array<{        // 选项（用于下拉、单选等）
     label: string;
-    value: any;
+    value: unknown;
   }>;
   min?: number;            // 最小值（用于数字、滑块等）
   max?: number;            // 最大值（用于数字、滑块等）
@@ -34,8 +34,8 @@ export interface PropertyConfig {
   placeholder?: string;    // 占位文本
   description?: string;    // 描述信息
   group?: string;          // 分组
-  condition?: (props: any) => boolean; // 条件显示
-  onChange?: (value: any, props: any) => any; // 值变化时的回调
+  condition?: (props: Record<string, unknown>) => boolean; // 条件显示
+  onChange?: (value: unknown, props: Record<string, unknown>) => unknown; // 值变化时的回调
 }
 
 export interface ComponentPropertyConfig {

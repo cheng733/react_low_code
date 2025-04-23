@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect,useMemo,useCallback } from 'react';
 import { Input, Typography, Image, QRCode, Form } from 'antd';
 import styled from 'styled-components';
 import { ComponentInstance, ComponentType, CanvasState, ProcessorType } from '../../types';
@@ -18,8 +18,8 @@ const PreviewContainer = styled.div<CanvasState>`
 
 interface FormPreviewProps {
   json: { components: ComponentInstance[], canvas: CanvasState };
-  formData?: Record<string, any>;
-  onValuesChange?: (changedValues: any, allValues: any) => void;
+  formData?: Record<string, unknown>;
+  onValuesChange?: (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => void;
 }
 
 /**
@@ -28,10 +28,12 @@ interface FormPreviewProps {
  */
 const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, formData = {}, onValuesChange }, ref) => {
   const [form] = Form.useForm();
-  const processors = json.canvas.dataProcessorConfig?.processors || [];
+  const processors = useMemo(() => {
+    return json.canvas.dataProcessorConfig?.processors || [];
+  }, [json.canvas.dataProcessorConfig?.processors]);
 
   // Create a default form data object
-  const defaultFormData = {
+  const defaultFormData = useMemo(() => ({
     title: "技术栈",
     name: '啊程',
     gender: '男',
@@ -40,13 +42,12 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
     qrcode: "https://github.com/low-code-project",
     phone: "12345678901",
     date: "2025-04-17 18:00:00"
-  };
+  }), []);
 
-  // Merge with provided formData
-  const mergedData = { ...defaultFormData, ...formData };
+  const mergedData = useMemo(() => ({ ...defaultFormData, ...formData }), [defaultFormData, formData]);
 
   // Process a field value based on the processor rules
-  const processFieldValue = (fieldId: string, value: any): any => {
+  const processFieldValue = useCallback((fieldId: string, value: unknown): unknown => {
     const processor = processors.find(p => p.fieldId === fieldId && p.enabled);
     if (!processor || value === undefined || value === null) return value;
 
@@ -62,14 +63,14 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
           if (processor.customProcessor) {
             try {
               // Get all field values including the current value
-              const allValues = {
+              const allValues: Record<string, unknown> = {
                 ...mergedData,
                 value // Make the current field value available as 'value'
               };
 
               // Create a safe evaluation context with all field values as variables
               const contextKeys = Object.keys(allValues);
-              const contextValues = contextKeys.map(key => allValues[key]);
+              const contextValues = contextKeys.map(key => allValues[key as keyof typeof allValues]);
 
               // Create a template literal evaluator function that has access to all field values
               const templateFunction = new Function(
@@ -105,20 +106,20 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
       console.error(`Error processing field ${fieldId}:`, error);
       return value;
     }
-  };
+  }, [processors, mergedData]);
 
   // Set initial values from formData
   useEffect(() => {
 
     // Process all values according to processing rules
     const processedData = Object.keys(mergedData).reduce((acc, key) => {
-      acc[key] = processFieldValue(key, mergedData[key]);
+      acc[key] = processFieldValue(key, mergedData[key as keyof typeof mergedData]);
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, unknown>);
 
     // Set the processed values to the form
     form.setFieldsValue(processedData);
-  }, [formData, form, processors]);
+  }, [formData, form, processors, mergedData, processFieldValue]);
   // Recursively render components
   const renderComponents = (comps: ComponentInstance[]) => {
     return comps.map((component) => renderComponent(component));
@@ -139,7 +140,7 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
     };
 
     switch (type) {
-      case ComponentType.TEXT:
+      case ComponentType.TEXT: {
         console.log(props)
         return (
           <Form.Item
@@ -150,11 +151,13 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
             initialValue={props.content}
           >
             {formId ? <CustomText
-              style={props.style || {}} /> : <Text style={props.style || {}}>{props.content}</Text>}
+              value={props.content as string}
+              style={props.style || {}} /> : <Text style={props.style || {}}>{props.content as React.ReactNode}</Text>}
           </Form.Item>
         );
+      }
 
-      case ComponentType.INPUT:
+      case ComponentType.INPUT: {
         return (
           <Form.Item
             key={id}
@@ -169,20 +172,22 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
             />
           </Form.Item>
         );
+      }
 
-      case ComponentType.IMAGE:
+      case ComponentType.IMAGE: {
         return (
           <div key={id} style={cleanStyle} className={`preview-component preview-${type.toLowerCase()}`}>
             <Image
-              src={props.src}
-              alt={props.alt}
+              src={props.src as string}
+              alt={props.alt as string}
               preview={false} // Always disable preview in form mode
               style={{ maxWidth: '100%' }}
             />
           </div>
         );
+      }
 
-      case ComponentType.QRCODE:
+      case ComponentType.QRCODE: {
         return (
           <Form.Item
             key={id}
@@ -193,20 +198,27 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
           >
             <QRCode
               // style={props.style || {}}
-              size={props.size || 128}
+              value={props.content as string  || "https://example.com"}
+              size={props.size as number || 128}
               style={{ maxWidth: '100%', border: 'none' }}
             />
           </Form.Item>
         );
+      }
 
-      case ComponentType.GRID:
+      case ComponentType.GRID: {
         // Calculate cell widths
         const columns = props.columns || 2;
-        const cells = props.cells || Array.from({ length: columns }, (_, i) => ({ id: `cell-${i}`, width: 100 / columns }));
+        const cells = props.cells || Array.from({ length: columns as number }, (_, i) => ({ id: `cell-${i}`, width: 100 / (columns as number) }));
 
         // Find children for each cell
-        const cellChildren = cells.map(cell => {
-          return children.filter(child => child.props?.cellId === cell.id);
+        interface GridCell {
+          id: string;
+          width: number;
+        }
+        
+        const cellChildren = (cells as GridCell[]).map((cell: GridCell) => {
+          return children.filter((child: ComponentInstance) => child.props?.cellId === cell.id);
         });
 
         return (
@@ -220,8 +232,8 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
             }}
             className={`preview-component preview-${type.toLowerCase()}`}
           >
-            {cells.map((cell, index) => {
-              const cellWidth = `${cell.width || 100 / columns}%`;
+            {(cells as GridCell[]).map((cell: GridCell, index: number) => {
+              const cellWidth = `${cell.width || 100 / (columns as number)}%`;
               return (
                 <div
                   key={cell.id}
@@ -237,9 +249,11 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
             })}
           </div>
         );
+      }
 
-      default:
+      default: {
         return null;
+      }
     }
   };
 
@@ -256,7 +270,13 @@ const FormPreview = React.forwardRef<HTMLDivElement, FormPreviewProps>(({ json, 
   );
 });
 
-const CustomText = ({ value, ...res }) => {
+interface CustomTextProps {
+  value: string;
+  style?: React.CSSProperties;
+  [key: string]: unknown;
+}
+
+const CustomText = ({ value, ...res }: CustomTextProps) => {
   return <Text {...res}>{value}</Text>
 }
 export default FormPreview;

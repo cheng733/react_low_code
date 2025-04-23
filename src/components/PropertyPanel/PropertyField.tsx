@@ -26,9 +26,9 @@ const FieldDescription = styled.div`
 
 interface PropertyFieldProps {
   config: PropertyConfig;
-  value: any;
-  onChange: (key: string, value: any) => void;
-  componentProps: any;
+  value: unknown;
+  onChange: (key: string, value: unknown) => void;
+  componentProps: Record<string, unknown>;
 }
 
 const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, componentProps }) => {
@@ -36,7 +36,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
     return null;
   }
   const currentValue = value !== undefined ? value : config.defaultValue;
-  const handleChange = (newValue: any) => {
+  const handleChange = (newValue: unknown) => {
     if (config.onChange) {
       newValue = config.onChange(newValue, componentProps);
     }
@@ -48,7 +48,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
       case PropertyType.TEXT:
         return (
           <Input
-            value={currentValue}
+            value={currentValue as string}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={config.placeholder}
           />
@@ -57,7 +57,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
       case PropertyType.NUMBER:
         return (
           <InputNumber
-            value={currentValue}
+            value={typeof currentValue === 'number' ? currentValue : undefined}
             onChange={(value) => {
               if (value !== null) {
                 handleChange(value);
@@ -73,13 +73,13 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
       case PropertyType.SELECT:
         return (
           <Select
-            value={currentValue}
-            onChange={handleChange}
+            value={currentValue as string}
+            onChange={(value) => handleChange(value)}
             style={{ width: '100%' }}
             placeholder={config.placeholder}
           >
             {config.options?.map((option) => (
-              <Option key={option.value} value={option.value}>
+              <Option key={String(option.value)} value={option.value}>
                 {option.label}
               </Option>
             ))}
@@ -87,12 +87,12 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
         );
 
       case PropertyType.SWITCH:
-        return <Switch checked={currentValue} onChange={handleChange} />;
+        return <Switch checked={Boolean(currentValue)} onChange={(checked) => handleChange(checked)} />;
 
       case PropertyType.COLOR:
         return (
           <ColorPicker
-            value={currentValue}
+            value={currentValue as string}
             onChange={(color) => handleChange(color.toHexString())}
           />
         );
@@ -100,8 +100,8 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
       case PropertyType.SLIDER:
         return (
           <Slider
-            value={currentValue}
-            onChange={handleChange}
+            value={typeof currentValue === 'number' ? currentValue : 0}
+            onChange={(value) => handleChange(value)}
             min={config.min}
             max={config.max}
             step={config.step}
@@ -110,9 +110,9 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
 
       case PropertyType.RADIO:
         return (
-          <Radio.Group value={currentValue} onChange={(e) => handleChange(e.target.value)}>
+          <Radio.Group value={currentValue as string} onChange={(e) => handleChange(e.target.value)}>
             {config.options?.map((option) => (
-              <Radio key={option.value} value={option.value}>
+              <Radio key={String(option.value)} value={option.value}>
                 {option.label}
               </Radio>
             ))}
@@ -121,7 +121,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
 
       case PropertyType.CHECKBOX:
         return (
-          <Checkbox checked={currentValue} onChange={(e) => handleChange(e.target.checked)}>
+          <Checkbox checked={Boolean(currentValue)} onChange={(e) => handleChange(e.target.checked)}>
             {config.label}
           </Checkbox>
         );
@@ -129,14 +129,15 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
       case PropertyType.TEXTAREA:
         return (
           <TextArea
-            value={currentValue}
+            value={currentValue as string}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={config.placeholder}
             rows={4}
           />
         );
+
       case PropertyType.PADDING:
-      case PropertyType.MARGIN:
+      case PropertyType.MARGIN: {
         const type = config.type === PropertyType.MARGIN ? 'margin' : 'padding';
         const directions = ['Top', 'Right', 'Bottom', 'Left'];
 
@@ -146,7 +147,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
               <div key={direction} style={{ flex: '1 0 45%' }}>
                 <FieldLabel style={{ fontSize: '12px' }}>{direction}</FieldLabel>
                 <Input
-                  value={get(componentProps, `style.${type}${direction}`) ?? currentValue}
+                  value={String(get(componentProps, `style.${type}${direction}`) ?? currentValue)}
                   onChange={(e) => onChange(`style.${type}${direction}`, e.target.value)}
                   size="small"
                 />
@@ -154,13 +155,14 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             ))}
           </div>
         );
+      }
 
-      case PropertyType.BORDER:
+      case PropertyType.BORDER: {
         return (
           <div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
               <Input
-                value={get(componentProps, 'style.borderWidth')}
+                value={String(get(componentProps, 'style.borderWidth') || '')}
                 onChange={(e) => onChange('style.borderWidth', e.target.value)}
                 placeholder="宽度"
                 addonAfter="px"
@@ -178,13 +180,14 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
               </Select>
             </div>
             <ColorPicker
-              value={get(componentProps, 'style.borderColor')}
+              value={get(componentProps, 'style.borderColor') as string}
               onChange={(color) => onChange('style.borderColor', color.toHexString())}
             />
           </div>
         );
+      }
 
-      case PropertyType.COLUMNS:
+      case PropertyType.COLUMNS: {
         return (
           <div style={{ marginBottom: '8px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
@@ -194,7 +197,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
               </Tooltip>
             </label>
             <Radio.Group
-              value={currentValue || 2}
+              value={Number(currentValue) || 2}
               onChange={(e) => {
                 const value = e.target.value;
                 if (typeof value === 'number') {
@@ -212,16 +215,17 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             </Radio.Group>
           </div>
         );
+      }
 
-      case PropertyType.COLUMN_WIDTH:
-        const cells = componentProps.cells || [];
-        const totalColumns = componentProps.columns || cells.length || 2;
+      case PropertyType.COLUMN_WIDTH: {
+        const cells = (componentProps.cells || []) as CellType[];
+        const totalColumns = Number(componentProps.columns) || cells.length || 2;
 
         // 定义单元格类型
         interface CellType {
           id: string;
           width?: number;
-          [key: string]: any;
+          [key: string]: unknown;
         }
 
         interface TableRecordType {
@@ -235,7 +239,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
         // 重新计算确保总和为100%
         const recalculateWidths = (updatedCells: CellType[], newValue: number, currentIndex: number) => {
           // 计算当前的总宽度和已固定的宽度
-          let fixedWidth = newValue;
+          const fixedWidth = newValue;
           const otherCellsCount = updatedCells.length - 1;
 
           // 计算剩余宽度并平均分配给其他列
@@ -257,7 +261,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
                 key: cell.id,
                 id: cell.id,
                 column: `列 ${index + 1}`,
-                width: cell.width || (100 / totalColumns),
+                width: Number(cell.width) || (100 / totalColumns),
                 index
               }))}
               pagination={false}
@@ -323,6 +327,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({ config, value, onChange, 
             </div>
           </div>
         );
+      }
 
       default:
         return <div>不支持的属性类型: {config.type}</div>;

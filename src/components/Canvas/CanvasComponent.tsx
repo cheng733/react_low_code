@@ -1,7 +1,7 @@
 import React, {  memo } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { useStore } from '../../store/useStore';
-import { ComponentInstance, ComponentType } from '../../types';
+import { ComponentInstance, ComponentType, ComponentCategory } from '../../types';
 import { Input, Typography, Image, QRCode } from 'antd';
 import styled, { createGlobalStyle } from 'styled-components';
 import { DeleteOutlined } from '@ant-design/icons';
@@ -39,7 +39,7 @@ interface GridCell {
   id: string;
   span?: number;
   width?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface GridProps {
@@ -47,21 +47,21 @@ interface GridProps {
   columns?: number;
   gutter?: number | [number, number];
   style?: React.CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Define interfaces for other component types
 interface TextProps {
   content?: string;
   style?: React.CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface InputProps {
   placeholder?: string;
   value?: string;
   style?: React.CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ImageProps {
@@ -69,7 +69,7 @@ interface ImageProps {
   alt?: string;
   preview?: boolean;
   style?: React.CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface QRCodeProps {
@@ -79,7 +79,7 @@ interface QRCodeProps {
   color?: string;
   bgColor?: string;
   style?: React.CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Define DragItem interface for drag and drop
@@ -87,7 +87,9 @@ interface DragItem {
   id: string;
   type: ComponentType;
   cellId?: string;
-  props?: Record<string, any>;
+  category?: ComponentCategory;
+  name?: string;
+  props?: Record<string, unknown>;
 }
 
 interface CanvasComponentProps {
@@ -145,7 +147,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
       selectComponent(component.id);
     }
   };
-  const handleChange = (newValue: any) => {
+  const handleChange = (newValue: unknown) => {
     const updatedProps = cloneDeep(component.props || {});
     set(updatedProps, 'value', newValue);
     updateComponent(component.id, { props: updatedProps });
@@ -162,7 +164,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
     };
 
     switch (component.type) {
-      case ComponentType.INPUT:
+      case ComponentType.INPUT: {
         const inputProps = props as unknown as InputProps;
         // 确保输入框组件有正确的display设置
         const inputStyle: React.CSSProperties = {
@@ -178,7 +180,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             {...(ispreview ? { type: 'text' } : {})}
           />
         );
-      case ComponentType.TEXT:
+      }
+      case ComponentType.TEXT: {
         const textProps = props as unknown as TextProps;
         // 确保文本组件有正确的display设置
         const textStyle: React.CSSProperties = {
@@ -187,10 +190,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
         };
 
         // 从textProps中提取style之外的其他属性
-        const { style, content, ...otherTextProps } = textProps;
+        const {  content, ...otherTextProps } = textProps;
 
         return <Typography.Text style={textStyle} {...otherTextProps}>{content}</Typography.Text>;
-      case ComponentType.IMAGE:
+      }
+      case ComponentType.IMAGE: {
         const imageProps = props as unknown as ImageProps;
         // 确保图片组件有正确的display设置
         const imageStyle: React.CSSProperties = {
@@ -199,7 +203,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
           maxWidth: '100%'
         };
         return <Image {...imageProps} style={imageStyle} />;
-      case ComponentType.QRCODE:
+      }
+      case ComponentType.QRCODE: {
         const qrcodeProps = props as unknown as QRCodeProps;
         // 确保QRCode组件样式正确
         const qrcodeStyle: React.CSSProperties = {
@@ -221,7 +226,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             style={qrcodeStyle}
           />
         );
-      case ComponentType.GRID:
+      }
+      case ComponentType.GRID: {
         const gridProps = props as unknown as GridProps;
         const columns = gridProps.columns || 1;
 
@@ -298,8 +304,10 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
             })}
           </div>
         );
-      default:
+      }
+      default: {
         return null;
+      }
     }
   };
 
@@ -352,9 +360,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = ({ component }) => {
   };
 
   // 在 useDrop 钩子中更新 hover 处理函数
-  const [collect, drop] = useDrop<DragItem, unknown, { isOver: boolean; canDrop: boolean }>({
+  const [, drop] = useDrop<DragItem, unknown, { isOver: boolean; canDrop: boolean }>({
     accept: ['COMPONENT', 'CANVAS_COMPONENT'],
-    hover: (item, monitor) => {
+    hover: (_, monitor) => {
       if (!node) return;
 
       const componentRect = node.getBoundingClientRect();
@@ -489,9 +497,9 @@ const GridCell = memo(({
   cellWidth: string;
   component: ComponentInstance;
   cellChildren: ComponentInstance[];
-  addComponent: (component: any) => void;
-  moveComponent: (id: string, parentId: string, options: any) => void;
-  updateComponent: (id: string, patch: any) => void;
+  addComponent: (component: ComponentInstance) => void;
+  moveComponent: (id: string, parentId: string, options: { index?: number; cellId?: string }) => void;
+  updateComponent: (id: string, patch: Partial<ComponentInstance>) => void;
   index: number;
   totalColumns: number;
   isSelected: boolean;
@@ -508,10 +516,13 @@ const GridCell = memo(({
         moveComponent(item.id, component.id, { cellId: cell.id });
       } else {
         // 添加新组件到单元格
+        // Generate a unique ID for the new component
         const newComponent = {
           ...item,
-          id: undefined,
+          id: `comp-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           parentId: component.id,
+          category: item.category || ComponentCategory.GENERAL,
+          name: item.name || item.type,
           props: {
             ...(item.props || {}),
             cellId: cell.id,
